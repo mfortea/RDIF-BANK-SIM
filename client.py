@@ -2,16 +2,19 @@
 import asyncio
 import websockets
 import json
+import RPi.GPIO as GPIO
+from mfrc522 import SimpleMFRC522
 
 async def simulate_rfid_card():
     try:
         async with websockets.connect("ws://localhost:8077") as websocket:
             while True:
-                # Simular la lectura de una tarjeta RFID
-                card_data_input = input("Simular acercar tarjeta RFID (escribe 'cardxxx' o cualquier otra cosa para una tarjeta no válida): ")
-                card_data = {"card_data": card_data_input}
-
-                await websocket.send(json.dumps(card_data))
+                reader = SimpleMFRC522()
+                try:
+                        id, text = reader.read()
+                finally:
+                        GPIO.cleanup()
+                await websocket.send(json.dumps(text))
 
                 # Recibe y muestra la respuesta del servidor
                 response = await websocket.recv()
