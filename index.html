@@ -3,11 +3,41 @@
 <head>
     <meta charset="UTF-8"/>
     <link rel="stylesheet" href="style/style.css">
-    <title>RFID Transaction Simulator</title>
+    <title>RFID Transaction Simulator</title>    <style>
+        .button {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <h1>RFID Transaction Simulator</h1>
-    <div id="status">Waiting for card data...</div>
+    <h1>🏦 RFID Transaction Simulator</h1>
+    <div id="amountDisplay">0 €</div>
+    <div id="keypad">
+        <div class="keypad-row">
+            <button class="keypadButton" onclick="pressKey('1')">1</button>
+            <button class="keypadButton" onclick="pressKey('2')">2</button>
+            <button class="keypadButton" onclick="pressKey('3')">3</button>
+        </div>
+        <div class="keypad-row">
+            <button class="keypadButton" onclick="pressKey('4')">4</button>
+            <button class="keypadButton" onclick="pressKey('5')">5</button>
+            <button class="keypadButton" onclick="pressKey('6')">6</button>
+        </div>
+        <div class="keypad-row">
+            <button class="keypadButton" onclick="pressKey('7')">7</button>
+            <button class="keypadButton" onclick="pressKey('8')">8</button>
+            <button class="keypadButton" onclick="pressKey('9')">9</button>
+        </div>
+        <div class="keypad-row">
+            <button class="keypadButton" onclick="pressKey('0')">0</button>
+            <button class="keypadButton" id="clearButton" onclick="pressKey('clear')">C</button>
+        </div>
+    </div>    
+    <button id="okButton" onclick="processPayment()">OK</button>
+    <div id="status">👆🏻 Enter amount</div>
+    <div id="connectionStatus">Server Status: Disconnected ❌</div>
     <script src="script.js"></script>
 </body>
-</html>
