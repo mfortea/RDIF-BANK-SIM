@@ -3,8 +3,11 @@ let ws;
 let isConnected = false;
 let amount = 0;
 
+let server_ip = "localhost";
+let server_port = 8078;
+
 function initWebSocket() {
-    ws = new WebSocket('ws://localhost:8077');
+    ws = new WebSocket('ws://'+ server_ip + ':'+ server_port);
 
     ws.onopen = function(event) {
         updateConnectionStatus(true);

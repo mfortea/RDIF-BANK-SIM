@@ -20,6 +20,12 @@ pip3 install websocket-client
 ```
 pip3 install json
 ```
+```
+pip3 install os
+```
+```
+pip3 install python-dotenv
+```
 For run the server:
 ```
 python3 server.py

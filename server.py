@@ -2,6 +2,14 @@
 import asyncio
 import websockets
 import json
+from dotenv import load_dotenv 
+import os
+
+# Loading variables from .env
+load_dotenv()
+
+# Ahora puedes acceder a las variables usando os.getenv
+PORT = os.getenv("WEBSOCKET_PORT")
 
 connected_clients = set()
 amount_to_charge = 0
@@ -27,7 +35,7 @@ async def payment_processor(websocket, path):
     finally:
         connected_clients.remove(websocket)
 
-start_server = websockets.serve(payment_processor, "localhost", 8077)
+start_server = websockets.serve(payment_processor, 'localhost', PORT)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
