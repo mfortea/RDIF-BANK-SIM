@@ -24,6 +24,7 @@ async def simulate_rfid_card():
             while True:
                 print("WAITING FOR RDIF CARD...")
                 card_data = reader.read()
+                print("FROM THE CARD: "+ card_data)
                 GPIO.cleanup()
                 await websocket.send(json.dumps(card_data))
                 # Recibe y muestra la respuesta del servidor
