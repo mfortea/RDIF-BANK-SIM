@@ -28,7 +28,7 @@ async def simulate_rfid_card():
     try:
         async with websockets.connect(websockets_ip) as websocket:
             while True:
-                if SIMULATION==False:
+                if SIMULATION=='False':
                     reader = SimpleMFRC522()
                     try:
                         text = reader.read()
@@ -47,6 +47,6 @@ async def simulate_rfid_card():
     except websockets.exceptions.ConnectionClosed as e:
         print("ERROR: CONNECTION CLOSED")
     except Exception as e:
-        print(f"ERROR: SERVER CAN NOT FOUND")
+        print(e)
 
 asyncio.get_event_loop().run_until_complete(simulate_rfid_card())

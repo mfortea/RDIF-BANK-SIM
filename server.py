@@ -35,7 +35,7 @@ async def payment_processor(websocket, path):
     finally:
         connected_clients.remove(websocket)
 
-start_server = websockets.serve(payment_processor, 'localhost', PORT)
+start_server = websockets.serve(payment_processor, '0.0.0.0', PORT)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
