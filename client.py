@@ -27,21 +27,15 @@ websockets_ip="ws://"+SERVER_IP+":"+PORT
 async def simulate_rfid_card():
     try:
         async with websockets.connect(websockets_ip) as websocket:
-            while True:
-                if SIMULATION=='False':
-                    reader = SimpleMFRC522()
-                    try:
-                        text = reader.read()
-                    finally:
-                        GPIO.cleanup()
-                        await websocket.send(json.dumps(text))
-                else:
-                    card_data_input = input("Simular acercar tarjeta RFID (escribe 'cardxxx' o cualquier otra cosa para una tarjeta no válida): ")
-                    card_data = {"card_data": card_data_input}
-                    await websocket.send(json.dumps(card_data))
+            reader = SimpleMFRC522()
+            try:
+                text = reader.read()
+            finally:
+                GPIO.cleanup()
+                await websocket.send(json.dumps(text))
 
-                response = await websocket.recv()
-                print(f"Respuesta del servidor: {response}")
+        response = await websocket.recv()
+        print(f"Respuesta del servidor: {response}")
     except websockets.exceptions.ConnectionClosedError as e:
         print("SERVER ERROR")
     except websockets.exceptions.ConnectionClosed as e:
