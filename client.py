@@ -4,14 +4,10 @@ import websockets
 import json
 from dotenv import load_dotenv 
 import os
-import platform
+import RPi.GPIO as GPIO
+from mfrc522 import SimpleMFRC522
 
-if platform.system() == 'Linux':
-    import RPi.GPIO as GPIO
-    from mfrc522 import SimpleMFRC522
-else:
-    print("This code requires a Raspberry Pi for the library RPi.GPIO.")
-
+reader = SimpleMFRC522()
 
 # Loading variables from .env
 load_dotenv()
@@ -20,22 +16,19 @@ SERVER_IP = os.getenv("WEBSOCKET_SERVER")
 PORT = os.getenv("WEBSOCKET_PORT")
 SIMULATION = os.getenv("SIMULATION")
 
-
 websockets_ip="ws://"+SERVER_IP+":"+PORT
-
 
 async def simulate_rfid_card():
     try:
         async with websockets.connect(websockets_ip) as websocket:
-            reader = SimpleMFRC522()
-            try:
-                text = reader.read()
-            finally:
+            while True:
+                print("WAITING FOR RDIF CARD...")
+                card_data = reader.read()
                 GPIO.cleanup()
-                await websocket.send(json.dumps(text))
-
-        response = await websocket.recv()
-        print(f"Respuesta del servidor: {response}")
+                await websocket.send(json.dumps(card_data))
+                # Recibe y muestra la respuesta del servidor
+                response = await websocket.recv()
+                print(f"SERVER RESPONSE: {response}")
     except websockets.exceptions.ConnectionClosedError as e:
         print("SERVER ERROR")
     except websockets.exceptions.ConnectionClosed as e:
