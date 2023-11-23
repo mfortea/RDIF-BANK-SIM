@@ -34,7 +34,7 @@ async def payment_processor(websocket, path):
 
     await websocket.send("AUTH_OK")
     
-    print(f"-> {username} CONNECTED")  # Muestra el nombre del usuario conectado
+    print(f"\n-> {username} CONNECTED")  # Muestra el nombre del usuario conectado
     connected_clients.add(websocket)
     try:
         async for message in websocket:
@@ -51,6 +51,7 @@ async def payment_processor(websocket, path):
                 await client.send(response)
     finally:
         connected_clients.remove(websocket)
+        print(f"-> {username} DISCONNECTED")
 
 
 # Función para manejar el cierre del servidor
