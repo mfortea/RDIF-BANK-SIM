@@ -20,7 +20,11 @@ def clear_terminal():
 clear_terminal()
 
 # Loading variables from .env
-load_dotenv()
+current_directory = os.path.dirname(os.path.abspath(__file__))
+parent_directory = os.path.dirname(current_directory)
+env_file_path = os.path.join(parent_directory, '.env')
+load_dotenv(env_file_path)
+
 
 SIMULATION = os.getenv("SIMULATION") == 'True'
 SERVER_IP = os.getenv("WEBSOCKET_SERVER")
@@ -37,7 +41,7 @@ websockets_ip = "wss://" + SERVER_IP + ":" + PORT
 
 # SSL context
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-ssl_context.load_verify_locations('cert.pem')
+ssl_context.load_verify_locations(CERT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 

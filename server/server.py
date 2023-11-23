@@ -60,7 +60,10 @@ async def shutdown(server, event):
     event.set()
 
 if __name__ == "__main__":
-    load_dotenv()
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    parent_directory = os.path.dirname(current_directory)
+    env_file_path = os.path.join(parent_directory, '.env')
+    load_dotenv(env_file_path)
 
     PORT = os.getenv("WEBSOCKET_PORT")
     SERVER_MODE = os.getenv("SERVER_MODE")
@@ -84,7 +87,10 @@ if __name__ == "__main__":
         payment_processor, 
         SERVER_MODE, 
         PORT,
-        ssl=ssl_context
+        ssl=ssl_context,
+        ping_interval=300,  
+        ping_timeout=300,  
+        close_timeout=300
     )
     print("* SERVER RUNNING...")
     server = loop.run_until_complete(start_server)
