@@ -33,6 +33,7 @@ CERT = os.getenv("CERT_PATH")
 
 if not SIMULATION:
     import RPi.GPIO as GPIO
+    GPIO.setwarnings(False)
     from mfrc522 import SimpleMFRC522
     reader = SimpleMFRC522()
 
