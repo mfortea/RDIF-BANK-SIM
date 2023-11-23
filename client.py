@@ -105,6 +105,8 @@ async def main():
         async with websockets.connect(websockets_ip, ssl=ssl_context) as websocket:
             print("*** Connected to the server successfully ***")
             await client_process(websocket)
+    except (ConnectionRefusedError, OSError):
+        print("\nSERVER NOT FOUND")
     except KeyboardInterrupt:
         print("\n\nCLIENT CLOSED")
 
