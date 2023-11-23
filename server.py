@@ -5,9 +5,35 @@ import os
 import ssl
 import signal
 from dotenv import load_dotenv
+import base64
+import bcrypt
 
-# Función para procesar los pagos
+async def authenticate_user(encrypted_credentials):
+    try:
+        credentials = base64.b64decode(encrypted_credentials).decode()
+        username, password = credentials.split(":")
+
+        with open("users.json", "r") as file:
+            users = json.load(file)
+            hashed_password = users.get(username).encode()
+
+            if bcrypt.checkpw(password.encode(), hashed_password):
+                return True
+    except Exception as e:
+        print(f"Error during authentication: {e}")
+    
+    return False
+
 async def payment_processor(websocket, path):
+    # Autenticación del usuario
+    credentials = await websocket.recv()
+    if not await authenticate_user(credentials):
+        await websocket.send("AUTH_FAILED")
+        return
+
+    await websocket.send("AUTH_OK")
+    
+    print("-> CLIENT CONNECTED")
     connected_clients.add(websocket)
     try:
         async for message in websocket:
@@ -28,7 +54,7 @@ async def payment_processor(websocket, path):
 
 # Función para manejar el cierre del servidor
 async def shutdown(server, event):
-    print("SERVER CLOSED")
+    print("\n\nSERVER CLOSED")
     server.close()
     await server.wait_closed()
     event.set()
@@ -53,13 +79,14 @@ if __name__ == "__main__":
     stop_event = asyncio.Event()
 
     # Iniciar el servidor
+
     start_server = websockets.serve(
         payment_processor, 
         SERVER_MODE, 
         PORT,
         ssl=ssl_context
     )
-
+    print("* SERVER RUNNING...")
     server = loop.run_until_complete(start_server)
 
     # Función para manejar la señal SIGINT (Ctrl+C)

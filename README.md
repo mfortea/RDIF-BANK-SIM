@@ -27,11 +27,18 @@ python3 server.py
 python3 client.py
 ```
 
-## Enviroment file format
+## 📄 Enviroment file format
 ```
 WEBSOCKET_SERVER=localhost
 WEBSOCKET_PORT=8078
 SERVER_MODE=localhost
 SIMULATION=True
+CERT_PATH=cert.pem
+KEY_PATH=key.pem
 
 ```
+
+## 🔒 SECURITY
+- Base64 for the data manipulation
+- SSL/TLS for the client-server communication
+- Bcrypt for hashing the passwords

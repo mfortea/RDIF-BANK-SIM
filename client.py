@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 import subprocess
 import os
 import ssl
+import base64
+import hashlib
+import getpass 
 
 def clear_terminal():
     # Windows
@@ -39,7 +42,24 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 
+def encrypt_credentials(username, password):
+    credentials = f"{username}:{password}"
+    return base64.b64encode(credentials.encode()).decode()
+
 async def client_process(websocket):
+    # Autenticación del usuario
+    print("\nSERVER LOGIN")
+    username = input("-> Username: ")
+    password = getpass.getpass("-> Password: ")  # Utilizando getpass para leer la contraseña
+    encrypted_credentials = encrypt_credentials(username, password)
+    await websocket.send(encrypted_credentials)
+
+    # Verificar respuesta de autenticación
+    auth_response = await websocket.recv()
+    if auth_response != "AUTH_OK":
+        print(f"\nAuthentication failed: {auth_response}")
+        return
+    
     try:
         while True:
             print("\n||== BANK TRANSACTION SIMULATOR ==||")
