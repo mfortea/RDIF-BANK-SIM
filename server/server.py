@@ -32,8 +32,8 @@ async def payment_processor(websocket, path):
         return
 
     await websocket.send("AUTH_OK")
-    
-    print("-> CLIENT CONNECTED")
+    username, password = credentials.split(":")
+    print("-> USER: "+username+" CONNECTED")
     connected_clients.add(websocket)
     try:
         async for message in websocket:
