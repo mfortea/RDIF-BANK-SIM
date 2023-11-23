@@ -12,7 +12,7 @@ Requirements:
 
 ## 📚 Libraries installation: 
 ```
-pip3 install asyncio websocket-client os python-dotenv json
+pip3 install asyncio websocket-client os dotenv load_dotenv
 ```
 
 
@@ -22,7 +22,16 @@ python3 server.py
 ```
 
 
-## 👨🏻‍💻 For the client, open index.html and run:
+## 👨🏻‍💻 For the client, run:
 ```
 python3 client.py
+```
+
+## Enviroment file format
+```
+WEBSOCKET_SERVER=localhost
+WEBSOCKET_PORT=8078
+SERVER_MODE=localhost
+SIMULATION=True
+
 ```
