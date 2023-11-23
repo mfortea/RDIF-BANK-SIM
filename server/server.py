@@ -18,7 +18,7 @@ async def authenticate_user(encrypted_credentials):
             hashed_password = users.get(username).encode()
 
             if bcrypt.checkpw(password.encode(), hashed_password):
-                return True
+                return username
     except Exception as e:
         print(f"Error during authentication: {e}")
     
@@ -27,13 +27,14 @@ async def authenticate_user(encrypted_credentials):
 async def payment_processor(websocket, path):
     # Autenticación del usuario
     credentials = await websocket.recv()
-    if not await authenticate_user(credentials):
+    username = await authenticate_user(credentials)  # Guarda el nombre de usuario
+    if not username:  # Verifica si username es False
         await websocket.send("AUTH_FAILED")
         return
 
     await websocket.send("AUTH_OK")
-    username, password = credentials.split(":")
-    print("-> USER: "+username+" CONNECTED")
+    
+    print(f"-> {username} CONNECTED")  # Muestra el nombre del usuario conectado
     connected_clients.add(websocket)
     try:
         async for message in websocket:
