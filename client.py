@@ -4,6 +4,7 @@ import json
 from dotenv import load_dotenv
 import subprocess
 import os
+import ssl
 
 def clear_terminal():
     # Windows
@@ -19,16 +20,24 @@ clear_terminal()
 load_dotenv()
 
 SIMULATION = os.getenv("SIMULATION") == 'True'
+SERVER_IP = os.getenv("WEBSOCKET_SERVER")
+PORT = os.getenv("WEBSOCKET_PORT")
+CERT = os.getenv("CERT_PATH")
 
 if not SIMULATION:
     import RPi.GPIO as GPIO
     from mfrc522 import SimpleMFRC522
     reader = SimpleMFRC522()
 
-SERVER_IP = os.getenv("WEBSOCKET_SERVER")
-PORT = os.getenv("WEBSOCKET_PORT")
 
-websockets_ip = "ws://" + SERVER_IP + ":" + PORT
+websockets_ip = "wss://" + SERVER_IP + ":" + PORT
+
+# SSL context
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+ssl_context.load_verify_locations('cert.pem')
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
 
 async def client_process(websocket):
     try:
@@ -72,8 +81,15 @@ async def client_process(websocket):
         print(f"ERROR: {e}")
 
 async def main():
-    async with websockets.connect(websockets_ip) as websocket:
-        print("*** Connected to the server successfully ***")
-        await client_process(websocket)
+    try:
+        async with websockets.connect(websockets_ip, ssl=ssl_context) as websocket:
+            print("*** Connected to the server successfully ***")
+            await client_process(websocket)
+    except KeyboardInterrupt:
+        print("\n\nCLIENT CLOSED")
 
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == "__main__":
+    try:
+        asyncio.get_event_loop().run_until_complete(main())
+    except KeyboardInterrupt:
+        print("\n\nCLIENT CLOSED")

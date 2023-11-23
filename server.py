@@ -1,17 +1,12 @@
 import asyncio
 import websockets
 import json
-from dotenv import load_dotenv
 import os
+import ssl
+import signal
+from dotenv import load_dotenv
 
-# Loading variables from .env
-load_dotenv()
-
-PORT = os.getenv("WEBSOCKET_PORT")
-SERVER_MODE = os.getenv("SERVER_MODE")
-
-connected_clients = set()
-
+# Función para procesar los pagos
 async def payment_processor(websocket, path):
     connected_clients.add(websocket)
     try:
@@ -30,7 +25,50 @@ async def payment_processor(websocket, path):
     finally:
         connected_clients.remove(websocket)
 
-start_server = websockets.serve(payment_processor, SERVER_MODE, PORT)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+# Función para manejar el cierre del servidor
+async def shutdown(server, event):
+    print("SERVER CLOSED")
+    server.close()
+    await server.wait_closed()
+    event.set()
+
+if __name__ == "__main__":
+    load_dotenv()
+
+    PORT = os.getenv("WEBSOCKET_PORT")
+    SERVER_MODE = os.getenv("SERVER_MODE")
+    CERT = os.getenv("CERT_PATH")
+    KEY = os.getenv("KEY_PATH")
+
+    # Crear contexto SSL
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain(CERT, KEY)
+
+    connected_clients = set()
+
+    loop = asyncio.get_event_loop()
+
+    # Evento para señalizar el cierre del servidor
+    stop_event = asyncio.Event()
+
+    # Iniciar el servidor
+    start_server = websockets.serve(
+        payment_processor, 
+        SERVER_MODE, 
+        PORT,
+        ssl=ssl_context
+    )
+
+    server = loop.run_until_complete(start_server)
+
+    # Función para manejar la señal SIGINT (Ctrl+C)
+    def signal_handler():
+        asyncio.create_task(shutdown(server, stop_event))
+
+    loop.add_signal_handler(signal.SIGINT, signal_handler)
+
+    try:
+        loop.run_until_complete(stop_event.wait())  # Esperar a que se active el evento de parada
+    finally:
+        loop.close()
