@@ -7,24 +7,22 @@ import os
 import ssl
 import base64
 import hashlib
-import getpass 
+import getpass
 
 def clear_terminal():
-    # Windows
+    # Clear the terminal screen
     if os.name == 'nt':
         subprocess.run('cls', shell=True)
-    # Unix/Linux/MacOS
     else:
         subprocess.run('clear', shell=True)
 
 clear_terminal()
 
-# Loading variables from .env
+# Load environment variables
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.dirname(current_directory)
 env_file_path = os.path.join(parent_directory, '.env')
 load_dotenv(env_file_path)
-
 
 SIMULATION = os.getenv("SIMULATION") == 'True'
 SERVER_IP = os.getenv("WEBSOCKET_SERVER")
@@ -37,73 +35,52 @@ if not SIMULATION:
     from mfrc522 import SimpleMFRC522
     reader = SimpleMFRC522()
 
-
 websockets_ip = "wss://" + SERVER_IP + ":" + PORT
 
-# SSL context
+# Configure SSL context
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ssl_context.load_verify_locations(CERT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
+def encrypt_credentials(username):
+    return base64.b64encode(username.encode()).decode()
 
-def encrypt_credentials(username, password):
-    credentials = f"{username}:{password}"
-    return base64.b64encode(credentials.encode()).decode()
+def read_card_data(prompt_message):
+    if SIMULATION:
+        return input(prompt_message)
+    else:
+        print("\nPlease approach your RFID card to the reader...")
+        id, card_data = reader.read()
+        GPIO.cleanup()
+        return card_data
 
 async def client_process(websocket):
-    # Autenticación del usuario
-    print("\nSERVER LOGIN")
-    username = input("-> Username: ")
-    password = getpass.getpass("-> Password: ")  # Utilizando getpass para leer la contraseña
-    encrypted_credentials = encrypt_credentials(username, password)
-    await websocket.send(encrypted_credentials)
+    print("\SYSTEM LOGIN")
+    user_card = read_card_data("-> USER AUTHENTICATION: ")
+    auth_card = read_card_data("-> AUTHENTICATION CARD: ")
 
-    # Verificar respuesta de autenticación
+    encrypted_user_card = encrypt_credentials(user_card)
+    encrypted_auth_card = encrypt_credentials(auth_card)
+    await websocket.send(json.dumps({"user_card": encrypted_user_card, "auth_card": encrypted_auth_card}))
+
     auth_response = await websocket.recv()
     if auth_response != "AUTH_OK":
         print(f"\nAuthentication failed: {auth_response}")
         return
-    
-    try:
-        while True:
-            print("\n||== BANK TRANSACTION SIMULATOR ==||")
 
-            # Validating amount input
-            while True:
-                amount = input("\n-> Please enter the amount to pay: ")
-                if amount.isdigit():
-                    break
-                print("Please enter a valid number for the amount.")
-
-            # Getting card data
-            if SIMULATION:
-                while True:
-                    card_data = input("\nSIMULATION: Enter your RFID card data: ")
-                    print("# Card found")
-                    if len(card_data.encode('utf-8')) <= 48:
-                        break
-                    print("Card data cannot exceed 48 characters")
-            else:
-                print("Please approach your RFID card to the reader...")
-                data = reader.read()
-                card_data = data[1]
-                print("# Card found")
-                GPIO.cleanup()
-                if len(card_data.encode('utf-8')) > 48:
-                    print("Error: Card data exceeds 48 characters")
-                    continue
-
-            payment_data = {"amount": amount, "card_data": card_data}
-            await websocket.send(json.dumps(payment_data))
-
-            # Receiving and displaying server response
-            response = await websocket.recv()
-            print(f"\n-> SERVER RESPONSE: {response}")
-            input("\nPress enter for make another transaction... ")
-            clear_terminal()
-    except Exception as e:
-        print(f"ERROR: {e}")
+    # Main menu
+    while True:
+        print("\n||== MAIN MENU ==||")
+        print("1. View Real-Time Information")
+        print("2. Open Doors")
+        print("3. Close Doors")
+        choice = input("Enter your choice: ")
+        # Send choice to server (implementation pending)
+        # await websocket.send(json.dumps({"choice": choice}))
+        print("Option under development...")
+        input("Press enter to return to the main menu... ")
+        clear_terminal()
 
 async def main():
     try:
@@ -116,7 +93,4 @@ async def main():
         print("\n\nCLIENT CLOSED")
 
 if __name__ == "__main__":
-    try:
-        asyncio.get_event_loop().run_until_complete(main())
-    except KeyboardInterrupt:
-        print("\n\nCLIENT CLOSED")
+    asyncio.get_event_loop().run_until_complete(main())

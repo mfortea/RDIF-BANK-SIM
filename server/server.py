@@ -8,51 +8,51 @@ from dotenv import load_dotenv
 import base64
 import bcrypt
 
-async def authenticate_user(encrypted_credentials):
+# Función para autenticar al usuario
+async def authenticate_user(user_card, auth_card, auth_card_content):
     try:
-        credentials = base64.b64decode(encrypted_credentials).decode()
-        username, password = credentials.split(":")
+        user_card_decoded = base64.b64decode(user_card).decode()
+        auth_card_decoded = base64.b64decode(auth_card).decode()
+
+        if auth_card_decoded != auth_card_content:
+            return False, "Invalid Auth Card"
 
         with open("users.json", "r") as file:
             users = json.load(file)
-            hashed_password = users.get(username).encode()
-
-            if bcrypt.checkpw(password.encode(), hashed_password):
-                return username
+            for user in users:
+                if bcrypt.checkpw(user_card_decoded.encode(), user["username"].encode()):
+                    if not user["enabled"]:
+                        return False, "User not enabled"
+                    return True, ""
+            return False, "User not authorized"
     except Exception as e:
         print(f"Error during authentication: {e}")
-    
-    return False
+        return False, "Authentication error"
+
+    return False, "Authentication failed"
 
 async def payment_processor(websocket, path):
-    # Autenticación del usuario
     credentials = await websocket.recv()
-    username = await authenticate_user(credentials)  # Guarda el nombre de usuario
-    if not username:  # Verifica si username es False
-        await websocket.send("AUTH_FAILED")
+    user_card, auth_card = json.loads(credentials).values()
+
+    auth_card_content = "SharedAuthCardContent"  # Define the content for the shared auth card
+    auth_result, message = await authenticate_user(user_card, auth_card, auth_card_content)
+
+    if not auth_result:
+        await websocket.send(message)
         return
 
     await websocket.send("AUTH_OK")
-    
-    print(f"\n-> {username} CONNECTED")  # Muestra el nombre del usuario conectado
+    username = base64.b64decode(user_card).decode()  # Assuming username is the user card content
+    print(f"\n-> {username} CONNECTED")
     connected_clients.add(websocket)
     try:
         async for message in websocket:
-            data = json.loads(message)
-            amount_to_charge = data.get("amount", 0)
-            card_data = data.get("card_data", "")
-
-            if card_data.startswith("card"):
-                response = f"✅ You paid {amount_to_charge} €"
-            else:
-                response = "❌ Invalid Card"
-
-            for client in connected_clients:
-                await client.send(response)
+            # Handling user choices here (implementation pending)
+            pass
     finally:
         connected_clients.remove(websocket)
         print(f"-> {username} DISCONNECTED")
-
 
 # Función para manejar el cierre del servidor
 async def shutdown(server, event):
@@ -72,7 +72,6 @@ if __name__ == "__main__":
     CERT = os.getenv("CERT_PATH")
     KEY = os.getenv("KEY_PATH")
 
-    # Crear contexto SSL
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(CERT, KEY)
 
@@ -80,10 +79,7 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
 
-    # Evento para señalizar el cierre del servidor
     stop_event = asyncio.Event()
-
-    # Iniciar el servidor
 
     start_server = websockets.serve(
         payment_processor, 
@@ -97,13 +93,12 @@ if __name__ == "__main__":
     print("* SERVER RUNNING...")
     server = loop.run_until_complete(start_server)
 
-    # Función para manejar la señal SIGINT (Ctrl+C)
     def signal_handler():
         asyncio.create_task(shutdown(server, stop_event))
 
     loop.add_signal_handler(signal.SIGINT, signal_handler)
 
     try:
-        loop.run_until_complete(stop_event.wait())  # Esperar a que se active el evento de parada
+        loop.run_until_complete(stop_event.wait())
     finally:
         loop.close()
