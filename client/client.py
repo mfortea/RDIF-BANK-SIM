@@ -14,9 +14,7 @@ def clear_terminal():
         subprocess.run('clear', shell=True)
 
 async def pause():
-    print("Inicio de la pausa")
-    await asyncio.sleep(2)  # Pausa de 5 segundos
-    print("Fin de la pausa")
+    await asyncio.sleep(1)
 
 clear_terminal()
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -73,13 +71,13 @@ async def client_process(websocket):
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
     await websocket.send(json.dumps({"auth_card": auth_card}))
 
-    # ... [resto del código] ...
-
 
     auth_response = await websocket.recv()
     if auth_response != "AUTH_OK":
         print(f"\nAuthentication failed: {auth_response}")
         return
+    
+    print("AUTHENTICATION CARD OK!")
 
     while True:
         print("\n||== MAIN MENU ==||")
