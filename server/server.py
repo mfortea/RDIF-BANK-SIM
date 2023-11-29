@@ -13,6 +13,7 @@ async def verify_user_card(user_card):
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
+                print("ESTOY EN USER.JSON Y LEO ESTO: " + user["username"])
                 if user_card == user["username"]:
                     return True, "USER_OK", base64.b64decode(user_card).decode()
                 else:
