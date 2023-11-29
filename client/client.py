@@ -59,6 +59,8 @@ async def client_process(websocket):
     if user_check_response != "USER_OK":
         print(f"\nAccess Denied: {user_check_response}")
         return
+    else:
+        print(f"\nOK: {user_check_response}")
 
     print("-> AUTHENTICATION CARD: ")
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
