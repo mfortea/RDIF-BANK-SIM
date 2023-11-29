@@ -8,22 +8,20 @@ from dotenv import load_dotenv
 import base64
 
 async def verify_user_card(user_card):
-    print("SOY EL SERVIDOR Y RECIBO: "+ user_card)
+    print("SOY EL SERVIDOR Y RECIBO: " + user_card)
     try:
         with open("users.json", "r") as file:
             users = json.load(file)
-            user_actual=""
             for user in users:
-                user_actual = user["username"]
-                if user_card == user_actual:
+                if user_card == user["username"]:
                     print("ESTOY EN EL TRUE")
                     return True, "USER_OK", base64.b64decode(user_card).decode()
-                else:
-                    return False, "User not authorized", None
+            # Si el bucle termina y no encuentra un usuario, retorna que no está autorizado
+            return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
         return False, "User card verification error", None
-    
+
 
 async def authenticate_user(auth_card, auth_card_content):
     try:
