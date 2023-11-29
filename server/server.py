@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 import base64
 
 async def verify_user_card(user_card):
-    print("SOY EL SERVIDOR Y RECIBO: " + user_card)
+    print("SOY EL SERVIDOR Y RECIBO (hex): " + user_card.encode().hex())
+    user_card = user_card.strip()  # Eliminar espacios en blanco
     try:
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
-                print("Comparando con: " + user["username"])  # Para depuración
-                if user_card == user["username"]:
+                user_name = user["username"].strip()  # Eliminar espacios en blanco
+                print("Comparando con (hex): " + user_name.encode().hex())  # Para depuración
+                if user_card == user_name:
                     print("ESTOY EN EL TRUE")
                     if not user["enabled"]:
                         return False, "User disabled", None
