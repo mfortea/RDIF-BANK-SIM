@@ -13,10 +13,12 @@ async def verify_user_card(user_card):
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
+                print("Comparando con: " + user["username"])  # Agregado para depuración
                 if user_card == user["username"]:
                     print("ESTOY EN EL TRUE")
+                    if not user["enabled"]:
+                        return False, "User disabled", None
                     return True, "USER_OK", base64.b64decode(user_card).decode()
-            # Si el bucle termina y no encuentra un usuario, retorna que no está autorizado
             return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
