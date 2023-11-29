@@ -46,7 +46,8 @@ def read_card_data(prompt_message):
         return input(prompt_message)
     else:
         print(prompt_message)
-        id, card_data = reader.read()
+        data = reader.read()
+        card_data = data[1]
         GPIO.cleanup()
         return card_data
 
