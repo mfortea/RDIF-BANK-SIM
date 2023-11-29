@@ -55,7 +55,6 @@ async def client_process(websocket):
     print("\nSYSTEM LOGIN")
     print("-> USER AUTHENTICATION: ")
     user_card = read_card_data("Please approach your User Card to the reader...")
-    print("SOY EL CLIENTE Y MANDO AL SERVIDOR: " + user_card)
     await websocket.send(json.dumps({"user_card": user_card}))
 
     user_check_response = await websocket.recv()
@@ -69,6 +68,7 @@ async def client_process(websocket):
 
     print("-> AUTHENTICATION CARD: ")
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
+    print("LA AUTH CARD TIENE: " + auth_card)
     await websocket.send(json.dumps({"auth_card": auth_card}))
 
 
