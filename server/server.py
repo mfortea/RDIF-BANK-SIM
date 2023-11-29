@@ -14,7 +14,7 @@ async def verify_user_card(user_card):
             users = json.load(file)
             for user in users:
                 if user_card == user["username"]:
-                    if not user["enabled"]:
+                    if user["enabled"] == "no":
                         return False, "User disabled", None
                     return True, "USER_OK", base64.b64decode(user_card).decode()
             return False, "User not authorized", None
