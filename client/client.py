@@ -6,7 +6,6 @@ import subprocess
 import os
 import ssl
 import base64
-import hashlib
 import getpass
 
 def clear_terminal():
@@ -43,26 +42,34 @@ ssl_context.load_verify_locations(CERT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
-def encrypt_credentials(username):
-    return base64.b64encode(username.encode()).decode()
+def encrypt_credentials(data):
+    return base64.b64encode(data.encode()).decode()
 
 def read_card_data(prompt_message):
     if SIMULATION:
         return input(prompt_message)
     else:
-        print("\nPlease approach your RFID card to the reader...")
+        print(prompt_message)
         id, card_data = reader.read()
         GPIO.cleanup()
         return card_data
 
 async def client_process(websocket):
-    print("\SYSTEM LOGIN")
-    user_card = read_card_data("-> USER AUTHENTICATION: ")
-    auth_card = read_card_data("-> AUTHENTICATION CARD: ")
-
+    print("\nSYSTEM LOGIN")
+    print("-> USER AUTHENTICATION: ")
+    user_card = read_card_data("Please approach your User Card to the reader...")
     encrypted_user_card = encrypt_credentials(user_card)
+    await websocket.send(json.dumps({"user_card": encrypted_user_card}))
+
+    user_check_response = await websocket.recv()
+    if user_check_response != "USER_OK":
+        print(f"\nAccess Denied: {user_check_response}")
+        return
+
+    print("-> AUTHENTICATION CARD: ")
+    auth_card = read_card_data("Please approach your Auth Card to the reader...")
     encrypted_auth_card = encrypt_credentials(auth_card)
-    await websocket.send(json.dumps({"user_card": encrypted_user_card, "auth_card": encrypted_auth_card}))
+    await websocket.send(json.dumps({"auth_card": encrypted_auth_card}))
 
     auth_response = await websocket.recv()
     if auth_response != "AUTH_OK":
