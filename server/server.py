@@ -6,16 +6,14 @@ import ssl
 import signal
 from dotenv import load_dotenv
 import base64
-import bcrypt
 
 async def verify_user_card(user_card):
     try:
         user_card_decoded = base64.b64decode(user_card).decode()
-
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
-                if bcrypt.checkpw(user_card_decoded.encode(), user["username"].encode()):
+                if user_card_decoded == user["username"]:
                     if not user["enabled"]:
                         return False, "User not enabled", None
                     return True, "", user_card_decoded
@@ -69,17 +67,11 @@ async def payment_processor(websocket, path):
         connected_clients.remove(websocket)
         print(f"-> {username} DISCONNECTED")
 
-# Función para manejar el cierre del servidor
-async def shutdown(server, event):
-    print("\n\nSERVER CLOSED")
-    server.close()
-    await server.wait_closed()
-    event.set()
-
 if __name__ == "__main__":
     current_directory = os.path.dirname(os.path.abspath(__file__))
     parent_directory = os.path.dirname(current_directory)
-    env_file_path = os.path.join(parent_directory, '.env')
+    grandparent_directory = os.path.dirname(parent_directory)
+    env_file_path = os.path.join(grandparent_directory, '.env')
     load_dotenv(env_file_path)
 
     PORT = os.getenv("WEBSOCKET_PORT")

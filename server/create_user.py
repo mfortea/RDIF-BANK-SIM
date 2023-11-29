@@ -1,12 +1,12 @@
 import json
-import bcrypt
+import base64
 
 def create_user(username, is_boss, is_enabled):
-    # Encriptar el nombre de usuario
-    hashed_username = bcrypt.hashpw(username.encode(), bcrypt.gensalt()).decode()
+    # Encriptar el nombre de usuario con Base64
+    encoded_username = base64.b64encode(username.encode()).decode()
 
     user_data = {
-        "username": hashed_username,
+        "username": encoded_username,
         "boss": is_boss,
         "enabled": is_enabled
     }
@@ -14,8 +14,7 @@ def create_user(username, is_boss, is_enabled):
     try:
         with open("users.json", "r+") as file:
             users = json.load(file)
-            # Verificar si el usuario ya existe (basado en el nombre encriptado)
-            if any(user["username"] == hashed_username for user in users):
+            if any(user["username"] == encoded_username for user in users):
                 print("Error: The user already exists")
                 return False
             users.append(user_data)
