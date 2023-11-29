@@ -13,6 +13,7 @@ async def verify_user_card(user_card):
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
+                print("Dentro del fichero está " + user["username"])
                 if user_card == user["username"]:
                     if not user["enabled"]:
                         return False, "User disabled", None
