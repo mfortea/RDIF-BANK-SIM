@@ -9,21 +9,20 @@ import base64
 
 async def verify_user_card(user_card):
     try:
-        user_card_decoded = base64.b64decode(user_card).decode()
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
-                print("Dentro del fichero está " + user["username"])
-                if user_card == user["username"]:
+                if user_card == user["username"]:  # Comparación en Base64
                     if not user["enabled"]:
                         return False, "User disabled", None
-                    return True, "", user_card_decoded
+                    return True, "", base64.b64decode(user_card).decode()  # Retorna nombre de usuario decodificado para uso posterior
             return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
         return False, "User card verification error", None
 
     return False, "User not found", None
+
 
 async def authenticate_user(auth_card, auth_card_content):
     try:
