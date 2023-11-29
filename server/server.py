@@ -15,7 +15,7 @@ async def verify_user_card(user_card):
                 if user_card == user["username"]:  # Comparación en Base64
                     if not user["enabled"]:
                         return False, "User disabled", None
-                return True, "User Identified", base64.b64decode(user_card).decode()  # Retorna nombre de usuario decodificado para uso posterior
+                return True, "", base64.b64decode(user_card).decode()  # Retorna nombre de usuario decodificado para uso posterior
             return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
@@ -43,7 +43,7 @@ async def payment_processor(websocket, path):
         await websocket.send(message)
         return
     else:
-        await websocket.send(message)
+        await websocket.send("USER_OK")
 
     auth_card_data = await websocket.recv()
     auth_card = json.loads(auth_card_data)["auth_card"]

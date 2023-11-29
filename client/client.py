@@ -13,6 +13,11 @@ def clear_terminal():
     else:
         subprocess.run('clear', shell=True)
 
+async def pause():
+    print("Inicio de la pausa")
+    await asyncio.sleep(2)  # Pausa de 5 segundos
+    print("Fin de la pausa")
+
 clear_terminal()
 current_directory = os.path.dirname(os.path.abspath(__file__))
 parent_directory = os.path.dirname(current_directory)
@@ -59,9 +64,8 @@ async def client_process(websocket):
     if user_check_response != "USER_OK":
         print(f"\nAccess Denied: {user_check_response}")
         return
-    else:
-        print(f"\nOK: {user_check_response}")
 
+    await pause()
     print("-> AUTHENTICATION CARD: ")
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
     await websocket.send(json.dumps({"auth_card": auth_card}))
