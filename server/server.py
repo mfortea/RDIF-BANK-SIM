@@ -12,10 +12,10 @@ async def verify_user_card(user_card):
         with open("users.json", "r") as file:
             users = json.load(file)
             for user in users:
-                if user_card == user["username"]:  # Comparación en Base64
+                if user_card == user["username"]:
                     if not user["enabled"]:
                         return False, "User disabled", None
-                return True, "", base64.b64decode(user_card).decode()  # Retorna nombre de usuario decodificado para uso posterior
+                    return True, "USER_OK", base64.b64decode(user_card).decode()
             return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
@@ -39,8 +39,8 @@ async def payment_processor(websocket, path):
     user_card = json.loads(user_card_data)["user_card"]
 
     user_valid, message, username = await verify_user_card(user_card)
+    await websocket.send(message)
     if not user_valid:
-        await websocket.send(message)
         return
     else:
         await websocket.send("USER_OK")
