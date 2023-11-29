@@ -52,6 +52,7 @@ async def client_process(websocket):
     print("\nSYSTEM LOGIN")
     print("-> USER AUTHENTICATION: ")
     user_card = read_card_data("Please approach your User Card to the reader...")
+    print("En la tarjeta pone:" + user_card)
     await websocket.send(json.dumps({"user_card": user_card}))
 
     user_check_response = await websocket.recv()
@@ -61,8 +62,7 @@ async def client_process(websocket):
 
     print("-> AUTHENTICATION CARD: ")
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
-    encrypted_auth_card = encrypt_data(auth_card)
-    await websocket.send(json.dumps({"auth_card": encrypted_auth_card}))
+    await websocket.send(json.dumps({"auth_card": auth_card}))
 
     auth_response = await websocket.recv()
     if auth_response != "AUTH_OK":
