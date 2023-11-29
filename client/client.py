@@ -38,9 +38,6 @@ ssl_context.load_verify_locations(CERT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
-def encrypt_data(data):
-    return base64.b64encode(data.encode()).decode()
-
 def read_card_data(prompt_message):
     if SIMULATION:
         return input(prompt_message)
@@ -55,8 +52,7 @@ async def client_process(websocket):
     print("\nSYSTEM LOGIN")
     print("-> USER AUTHENTICATION: ")
     user_card = read_card_data("Please approach your User Card to the reader...")
-    encrypted_user_card = encrypt_data(user_card)
-    await websocket.send(json.dumps({"user_card": encrypted_user_card}))
+    await websocket.send(json.dumps({"user_card": user_card}))
 
     user_check_response = await websocket.recv()
     if user_check_response != "USER_OK":

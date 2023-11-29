@@ -67,6 +67,13 @@ async def payment_processor(websocket, path):
         connected_clients.remove(websocket)
         print(f"-> {username} DISCONNECTED")
 
+# Función para manejar el cierre del servidor
+async def shutdown(server, event):
+    print("\n\nSERVER CLOSED")
+    server.close()
+    await server.wait_closed()
+    event.set()
+
 if __name__ == "__main__":
     current_directory = os.path.dirname(os.path.abspath(__file__))
     parent_directory = os.path.dirname(current_directory)
