@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import base64
 
 async def verify_user_card(user_card):
+    print("SOY EL SERVIDOR Y RECIBO: "+ user_card)
     try:
         with open("users.json", "r") as file:
             users = json.load(file)
