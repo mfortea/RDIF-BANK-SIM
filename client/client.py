@@ -50,7 +50,7 @@ def read_card_data(prompt_message):
         card_data = data[1]
         GPIO.cleanup()
         return card_data
-
+    
 async def client_process(websocket):
     print("\nSYSTEM LOGIN")
     print("-> USER AUTHENTICATION: ")
@@ -64,13 +64,9 @@ async def client_process(websocket):
     else:
         print("User verified successfully.")
 
-    await pause()
-
-    print("-> AUTHENTICATION CARD: ")
+    print("\n-> AUTHENTICATION CARD: ")
     auth_card = read_card_data("Please approach your Auth Card to the reader...")
-    print("LA AUTH CARD TIENE: " + auth_card)
     await websocket.send(json.dumps({"auth_card": auth_card}))
-
 
     auth_response = await websocket.recv()
     if auth_response != "AUTH_OK":
