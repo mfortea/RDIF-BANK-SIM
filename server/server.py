@@ -7,6 +7,67 @@ import signal
 from dotenv import load_dotenv
 import base64
 
+def load_users():
+    with open("users.json", "r") as file:
+        return json.load(file)
+
+def save_users(users):
+    with open("users.json", "w") as file:
+        json.dump(users, file, indent=4)
+
+async def manage_users(websocket, is_boss):
+    if not is_boss:
+        return
+
+    while True:
+        command = await websocket.recv()
+        users = load_users()
+
+        if command == "list_users":
+            user_list = []
+            for user in users:
+                # Decodificando el nombre de usuario de Base64 para mostrarlo
+                decoded_username = base64.b64decode(user['username']).decode()
+                user_info = f"Username: {decoded_username} - {'Is Boss' if user['boss'] else 'Not Boss'} - {'User enabled' if user['enabled'] else 'User disabled'}"
+                user_list.append(user_info)
+            await websocket.send(json.dumps(user_list))
+        elif command.startswith("modify_user"):
+            _, username, status = command.split()
+            # Codificando el nombre de usuario ingresado para la comparación
+            encoded_username = base64.b64encode(username.encode()).decode()
+            for user in users:
+                if user['username'] == encoded_username:
+                    user['enabled'] = status == 'enable'
+                    save_users(users)
+                    await websocket.send(f"User {decoded_username} updated.")
+                    break
+            else:
+                await websocket.send(f"User {username} not found.")
+        elif command.startswith("delete_user"):
+            _, username = command.split()
+            encoded_username = base64.b64encode(username.encode()).decode()
+            original_count = len(users)
+            users = [user for user in users if user['username'] != encoded_username]
+            if len(users) < original_count:
+                save_users(users)
+                await websocket.send(f"User {username} deleted.")
+            else:
+                await websocket.send(f"User {username} not found.")
+        elif command.startswith("add_user"):
+            _, username, boss_str, enabled_str = command.split()
+            encoded_username = base64.b64encode(username.encode()).decode()
+            is_boss = boss_str == 'yes'
+            is_enabled = enabled_str == 'yes'
+            # Verifica si el usuario ya existe
+            if any(user["username"] == encoded_username for user in users):
+                await websocket.send("Error: The user already exists")
+            else:
+                users.append({"username": encoded_username, "enabled": is_enabled, "boss": is_boss})
+                save_users(users)
+                await websocket.send(f"User {username} added.")
+        elif command == "exit":
+            break
+
 async def verify_user_card(user_card):
     user_card = user_card.strip()  # Eliminar espacios en blanco
     try:
@@ -17,7 +78,7 @@ async def verify_user_card(user_card):
                 if user_card == user_name:
                     if not user["enabled"]:
                         return False, "User disabled", None
-                    return True, "USER_OK", base64.b64decode(user_card).decode()
+                    return True, "USER_OK", base64.b64decode(user_card).decode(), user["boss"]
             return False, "User not authorized", None
     except Exception as e:
         print(f"Error during user card verification: {e}")
@@ -30,10 +91,6 @@ async def authenticate_user(auth_card, auth_card_content):
         auth_card_decoded = base64.b64decode(auth_card).decode()
         auth_card_decoded = auth_card_decoded.strip() 
         auth_card_content = auth_card_content.strip()
-
-        print(f"Decoded auth card: '{auth_card_decoded}'")
-        print(f"Expected content: '{auth_card_content}'")
-
         if auth_card_decoded != auth_card_content:
             return False, "Invalid Auth Card"
         return True, ""
@@ -52,12 +109,13 @@ async def payment_processor(websocket, path):
     user_card_data = await websocket.recv()
     user_card = json.loads(user_card_data)["user_card"]
 
-    user_valid, message, username = await verify_user_card(user_card)
+    user_valid, message, username, is_boss = await verify_user_card(user_card)
     if not user_valid:
         await websocket.send(message)
         return
     else:
-        await websocket.send("USER_OK")
+        boss_status = 'boss' if is_boss else 'not_boss'
+        await websocket.send(f"USER_OK;{boss_status}")
 
     auth_card_data = await websocket.recv()
     auth_card = json.loads(auth_card_data)["auth_card"]
@@ -73,6 +131,9 @@ async def payment_processor(websocket, path):
     else:
         await websocket.send("AUTH_OK")
 
+    if is_boss:
+        await manage_users(websocket, is_boss)
+
     print(f"\n-> {username} CONNECTED")
     connected_clients.add(websocket)
     try:
@@ -82,6 +143,7 @@ async def payment_processor(websocket, path):
     finally:
         connected_clients.remove(websocket)
         print(f"-> {username} DISCONNECTED")
+
 
 # Función para manejar el cierre del servidor
 async def shutdown(server, event):
