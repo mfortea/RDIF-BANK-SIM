@@ -1,5 +1,5 @@
-# 🏦 RDIF Bank Simulator
-RDIF bank payment simulator for the course Computer System Security of the HMU (Hellenic Mediterranean University).
+# 💳 RFID SECURITY PROJECT
+Project about use of RFID cards (securized) for the course Computer System Security of the HMU (Hellenic Mediterranean University).
 
 Requirements:
 - Pyhton 3.6 or later
