@@ -23,14 +23,16 @@ async def verify_user_card(user_card):
         print(f"Error during user card verification: {e}")
         return False, "User card verification error", None
 
+auth_card_content_encrypted = base64.b64encode("SharedAuthData".encode()).decode()  # Reemplazar con tu valor real
+
 async def authenticate_user(auth_card, auth_card_content):
     try:
         auth_card_decoded = base64.b64decode(auth_card).decode()
         auth_card_decoded = auth_card_decoded.strip() 
         auth_card_content = auth_card_content.strip()
 
-        print(f"Decoded auth card: {auth_card_decoded}")
-        print(f"Expected content: {auth_card_content}")
+        print(f"Decoded auth card: '{auth_card_decoded}'")
+        print(f"Expected content: '{auth_card_content}'")
 
         if auth_card_decoded != auth_card_content:
             return False, "Invalid Auth Card"
@@ -60,7 +62,9 @@ async def payment_processor(websocket, path):
     auth_card_data = await websocket.recv()
     auth_card = json.loads(auth_card_data)["auth_card"]
 
-    auth_card_content = "SharedAuthCard"
+    # Asegúrate de definir o tener accesible auth_card_content
+    auth_card_content = "SharedAuthData"  # Reemplaza esto con el valor real esperado
+
     auth_valid, message = await authenticate_user(auth_card, auth_card_content)
 
     if not auth_valid:
