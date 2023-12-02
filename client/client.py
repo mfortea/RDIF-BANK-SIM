@@ -6,6 +6,19 @@ import subprocess
 import os
 import ssl
 import base64
+import sys
+import termios
+import tty
+
+def get_key():
+    fd = sys.stdin.fileno()
+    original_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, original_settings)
+    return ch
 
 def clear_terminal():
     if os.name == 'nt':
@@ -55,14 +68,18 @@ def read_card_data(prompt_message):
 async def manage_users(websocket):
     while True:
         print("\n||== USER MANAGEMENT MENU ==||")
-        print("1. List Users")
+        print("\n1. List Users")
         print("2. Modify User")
         print("3. Delete User")
         print("4. Add User")
-        print("5. Return to Main Menu")
-        choice = input("Enter your choice: ")
+        print("\nPress ESCAPE for return to Main Menu")
+        print("\n-> Enter your choice: ")
 
-        if choice == "1":
+        choice = get_key()
+
+        if choice == '\x1b':  # ASCII code for ESC
+            break 
+        elif choice == "1":
             await websocket.send("list_users")
             users = await websocket.recv()
             print("Users:", json.loads(users))
@@ -84,54 +101,77 @@ async def manage_users(websocket):
             await websocket.send(f"add_user {new_user} {'yes' if is_boss else 'no'} {'yes' if is_enabled else 'no'}")
             response = await websocket.recv()
             print(response)
-        elif choice == "5":
-            break  # Regresar al menú principal
+        else:
+            print("Invalid option")
 
 async def client_process(websocket, is_boss):
-    print("\nSYSTEM LOGIN")
-    print("-> USER AUTHENTICATION: ")
-    user_card = read_card_data("Please approach your User Card to the reader...")
-    await websocket.send(json.dumps({"user_card": user_card}))
+    while True:
+        print("\nSYSTEM LOGIN")
+        print("-> USER AUTHENTICATION: ")
+        user_card = read_card_data("Please approach your User Card to the reader...")
+        await websocket.send(json.dumps({"user_card": user_card}))
 
-    user_check_response = await websocket.recv()
-    if "USER_OK" not in user_check_response:
-        print(f"\nAccess Denied: {user_check_response}")
-        return
-    else:
-        _, boss_status = user_check_response.split(';')
-        is_boss = boss_status == 'boss'
-        print("User verified successfully.")
+        user_check_response = await websocket.recv()
+        if "USER_OK" not in user_check_response:
+            print(f"\nAccess Denied: {user_check_response}")
+            print("Please approach your User Card to the reader again...")
+            continue
+        else:
+            _, boss_status = user_check_response.split(';')
+            is_boss = boss_status == 'boss'
+            print("User verified successfully.")
 
-    print("\n-> AUTHENTICATION CARD: ")
-    auth_card = read_card_data("Please approach your Auth Card to the reader...")
-    await websocket.send(json.dumps({"auth_card": auth_card}))
+        print("\n-> AUTHENTICATION CARD: ")
+        auth_card = read_card_data("Please approach your Auth Card to the reader...")
+        await websocket.send(json.dumps({"auth_card": auth_card}))
 
-    auth_response = await websocket.recv()
-    if auth_response != "AUTH_OK":
-        print(f"\nAuthentication failed: {auth_response}")
-        return
-    
+        auth_response = await websocket.recv()
+        if auth_response != "AUTH_OK":
+            print(f"\nAuthentication failed: {auth_response}")
+            return
+        break
     print("AUTHENTICATION CARD OK!")
 
     while True:
-        print("\n||== MAIN MENU ==||")
-        print("1. View Real-Time Information")
-        print("2. Open Doors")
-        print("3. Close Doors")
-        if is_boss:
-            print("4. Manage Users")
+            try:
+                print("\n||== MAIN MENU ==||")
+                print("\n1. View Real-Time Information")
+                print("2. Open Doors")
+                print("3. Close Doors")
+                if is_boss:
+                    print("4. Manage Users")
+                print("\nPress ESCAPE for disconnet")
+                print("\n-> Enter your choice: ")
 
-        choice = input("Enter your choice: ")
-        
-        if choice in ["1", "2", "3"]:
-            print("Option under development...")
-        elif choice == "4" and is_boss:
-            await manage_users(websocket)
-        else:
-            print("Invalid option or insufficient permissions.")
+                choice = get_key()
 
-        input("Press enter to return to the main menu... ")
-        clear_terminal()
+                if choice == '\x1b':  # ASCII code for ESC
+                    break 
+                elif choice == "1":
+                    clear_terminal()
+                    print("Option under development...")
+                elif choice == "2":
+                    clear_terminal()
+                    print("Option under development...")
+                elif choice == "3":
+                    clear_terminal()
+                    print("Option under development...")
+                elif choice == "4" and is_boss:
+                    clear_terminal()
+                    await manage_users(websocket)
+                else:
+                    print("Invalid option")
+
+                input("Press enter for continue... ")
+                clear_terminal()
+
+            except websockets.exceptions.ConnectionClosed:
+                clear_terminal()
+                print("SERVER DISCONNECTED")
+                break
+            except Exception as e:
+                clear_terminal()
+                print(f"Error: {e}")
 
 async def main():
     try:
@@ -141,8 +181,12 @@ async def main():
             await client_process(websocket, is_boss)
     except (ConnectionRefusedError, OSError):
         print("\nSERVER NOT FOUND")
+    except websockets.exceptions.ConnectionClosed:
+        print("\nSERVER DISCONNECTED")
     except KeyboardInterrupt:
         print("\n\nCLIENT CLOSED")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
