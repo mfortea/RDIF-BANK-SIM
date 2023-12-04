@@ -3,5 +3,10 @@
         "username": "bWF0ZW8=",
         "boss": true,
         "enabled": true
+    },
+    {
+        "username": "bHVjaWE=",
+        "enabled": true,
+        "boss": false
     }
 ]
