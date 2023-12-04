@@ -63,6 +63,10 @@ def read_card_data(prompt_message):
         data = reader.read()
         card_data = data[1]
         GPIO.cleanup()
+        try:
+            decoded_data = base64.b64decode(card_data)
+        except base64.binascii.Error as e:
+            print(f"ERROR: NO VALID DATA {e}")
         return card_data
     
 async def manage_users(websocket):
@@ -105,7 +109,10 @@ async def manage_users(websocket):
             print("Invalid option")
 
 async def client_process(websocket, is_boss):
-    while True:
+    max_attempts = 3
+    attempts = 0
+
+    while attempts < max_attempts:
         print("\nSYSTEM LOGIN")
         print("-> USER AUTHENTICATION: ")
         user_card = read_card_data("Please approach your User Card to the reader...")
@@ -115,6 +122,7 @@ async def client_process(websocket, is_boss):
         if "USER_OK" not in user_check_response:
             print(f"\nAccess Denied: {user_check_response}")
             print("Please approach your User Card to the reader again...")
+            attempts += 1
             continue
         else:
             _, boss_status = user_check_response.split(';')
@@ -122,15 +130,25 @@ async def client_process(websocket, is_boss):
             print("User verified successfully.")
 
         print("\n-> AUTHENTICATION CARD: ")
-        auth_card = read_card_data("Please approach your Auth Card to the reader...")
-        await websocket.send(json.dumps({"auth_card": auth_card}))
+        for _ in range(max_attempts - attempts):
+            auth_card = read_card_data("Please approach your Auth Card to the reader...")
+            await websocket.send(json.dumps({"auth_card": auth_card}))
 
-        auth_response = await websocket.recv()
-        if auth_response != "AUTH_OK":
-            print(f"\nAuthentication failed: {auth_response}")
-            return
-        break
-    print("AUTHENTICATION CARD OK!")
+            auth_response = await websocket.recv()
+            if auth_response != "AUTH_OK":
+                print(f"\nAuthentication failed: {auth_response}")
+                attempts += 1
+                if attempts >= max_attempts:
+                    print("Maximum authentication attempts reached. Disconnecting...")
+                    return
+                continue
+            break
+        if attempts < max_attempts:
+            break
+
+    if attempts >= max_attempts:
+        print("\n\nToo many attemps. Disconnecting...")
+        return
 
     while True:
             try:

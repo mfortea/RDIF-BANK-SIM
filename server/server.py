@@ -128,7 +128,9 @@ async def payment_processor(websocket, path):
                 task = asyncio.wait_for(websocket.recv(), timeout=1.0)
                 user_card_data = await task
                 user_card = json.loads(user_card_data)["user_card"]
-
+                if user_card is None:
+                    print("ERROR: BAD DATA RECEIVED")
+                    return
                 user_valid, message, username, is_boss = await verify_user_card(user_card)
                 if not user_valid:
                     await websocket.send(message)
@@ -153,11 +155,11 @@ async def payment_processor(websocket, path):
                     await manage_users(websocket, is_boss)
 
             except asyncio.TimeoutError:
-                # Si no hay mensajes, simplemente continúa el bucle
                 continue
             except websockets.exceptions.ConnectionClosed:
-                # Si la conexión se cierra, actualiza el flag y rompe el bucle
                 connection_active = False
+            except KeyError:
+                print("ERROR: BAD DATA RECEIVED")
 
     except websockets.exceptions.ConnectionClosedOK:
         print(f"-> USER {username} DISCONNECTED")
