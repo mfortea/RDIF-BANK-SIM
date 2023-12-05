@@ -111,6 +111,7 @@ async def manage_users(websocket):
 async def client_process(websocket, is_boss):
     max_attempts = 3
     attempts = 0
+    username = "Unknown"
 
     while attempts < max_attempts:
         print("\nSYSTEM LOGIN")
@@ -125,9 +126,9 @@ async def client_process(websocket, is_boss):
             attempts += 1
             continue
         else:
-            _, boss_status = user_check_response.split(';')
+            _, boss_status, username = user_check_response.split(';') 
             is_boss = boss_status == 'boss'
-            print("User verified successfully.")
+            print(f"User {username} verified successfully.")
         await pause()
         print("\n-> AUTHENTICATION CARD: ")
         for _ in range(max_attempts - attempts):
@@ -152,6 +153,7 @@ async def client_process(websocket, is_boss):
 
     while True:
             try:
+                print("\n Welcome, "+username+ "!")
                 print("\n||== MAIN MENU ==||")
                 print("\n1. View Real-Time Information")
                 print("2. Open Doors")
