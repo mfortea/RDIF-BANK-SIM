@@ -137,7 +137,7 @@ async def payment_processor(websocket, path):
                     continue 
 
                 boss_status = 'boss' if is_boss else 'not_boss'
-                await websocket.send(f"USER_OK;{boss_status}")
+                await websocket.send(f"USER_OK;{boss_status};{username}")
 
                 auth_card_data = await websocket.recv()
                 auth_card = json.loads(auth_card_data)["auth_card"]
