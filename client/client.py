@@ -128,7 +128,7 @@ async def client_process(websocket, is_boss):
             _, boss_status = user_check_response.split(';')
             is_boss = boss_status == 'boss'
             print("User verified successfully.")
-        pause()
+        await pause()
         print("\n-> AUTHENTICATION CARD: ")
         for _ in range(max_attempts - attempts):
             auth_card = read_card_data("Please approach your Auth Card to the reader...")
