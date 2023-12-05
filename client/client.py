@@ -27,7 +27,7 @@ def clear_terminal():
         subprocess.run('clear', shell=True)
 
 async def pause():
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
 
 clear_terminal()
 current_directory = os.path.dirname(os.path.abspath(__file__))

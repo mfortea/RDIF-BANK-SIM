@@ -103,6 +103,8 @@ async def authenticate_user(auth_card, auth_card_content):
         auth_card_decoded = base64.b64decode(auth_card).decode()
         auth_card_decoded = auth_card_decoded.strip() 
         auth_card_content = auth_card_content.strip()
+        print("DEL SERVIDOR: LA TARJETA TIENE: " + auth_card_decoded)
+        print("DEL SERVIDOR: SE ESTÁ COMPARANDO CON: " + auth_card_content)
         if auth_card_decoded != auth_card_content:
             return False, "Invalid Auth Card"
         return True, ""
@@ -129,7 +131,7 @@ async def payment_processor(websocket, path):
                 user_card_data = await task
                 user_card = json.loads(user_card_data)["user_card"]
                 if user_card is None:
-                    print("ERROR: BAD DATA RECEIVED")
+                    print("ERROR: BAD USER DATA RECEIVED")
                     return
                 user_valid, message, username, is_boss = await verify_user_card(user_card)
                 if not user_valid:
@@ -159,7 +161,7 @@ async def payment_processor(websocket, path):
             except websockets.exceptions.ConnectionClosed:
                 connection_active = False
             except KeyError:
-                print("ERROR: BAD DATA RECEIVED")
+                print("ERROR: BAD AUTH DATA RECEIVED")
 
     except websockets.exceptions.ConnectionClosedOK:
         print(f"-> USER {username} DISCONNECTED")
