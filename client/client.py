@@ -92,7 +92,7 @@ async def manage_users(websocket):
             for user in user_list:
                 print(user)
                 num_users=num_users+1
-            print("\n Total: " + num_users+ " user/s")
+            print("\n Total: " + str(num_users)+ " user/s")
         elif choice == "2":
             username = input("Enter username to modify: ")
             new_status = input("Enter new status (enable/disable): ")
