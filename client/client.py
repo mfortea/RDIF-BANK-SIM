@@ -86,8 +86,9 @@ async def manage_users(websocket):
         elif choice == "1":
             await websocket.send("list_users")
             users = await websocket.recv()
-            print("List of users:")
-            for user in users:
+            user_list = json.loads(users)
+            print("User list:")
+            for user in user_list:
                 print(user)
         elif choice == "2":
             username = input("Enter username to modify: ")
