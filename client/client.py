@@ -153,7 +153,8 @@ async def client_process(websocket, is_boss):
 
     while True:
             try:
-                print("\n Welcome, "+username+ "!")
+                clear_terminal()
+                print("\nWelcome, "+username+ "!")
                 print("\n||== MAIN MENU ==||")
                 print("\n1. View Real-Time Information")
                 print("2. Open Doors")
