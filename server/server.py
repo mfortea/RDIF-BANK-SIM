@@ -36,7 +36,7 @@ async def manage_users(websocket, is_boss):
                 user_list = []
                 for user in users:
                     decoded_username = base64.b64decode(user['username']).decode()
-                    user_info = f"\nUsername: {decoded_username} - {'Is Boss' if user['boss'] else 'Not Boss'} - {'User enabled' if user['enabled'] else 'User disabled'}"
+                    user_info = f"Username: {decoded_username} - {'Is Boss' if user['boss'] else 'Not Boss'} - {'User enabled' if user['enabled'] else 'User disabled'}"
                     user_list.append(user_info)
                 await websocket.send(json.dumps(user_list))
 
