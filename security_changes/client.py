@@ -56,6 +56,28 @@ ssl_context.load_verify_locations(CERT)
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
+def generate_hash(data):
+    """Genera un hash a partir de los datos."""
+    return hashlib.sha256(data.encode()).digest()
+
+def encode_hash(hash_value):
+    """Codifica un valor hash en base64 para transmisión."""
+    return base64.b64encode(hash_value).decode()
+
+def decode_hash(encoded_hash):
+    """Decodifica un valor hash en base64."""
+    return base64.b64decode(encoded_hash)
+
+
+
+async def authenticate_with_server(websocket, card_hashes):
+    # Envía los hashes al servidor para la autenticación
+    await websocket.send(json.dumps({"card_hashes": card_hashes}))
+
+    # Recibe la respuesta del servidor
+    response = await websocket.recv()
+    return response == "AUTH_OK"
+
 
 def read_card_data(prompt_message):
     if SIMULATION:
