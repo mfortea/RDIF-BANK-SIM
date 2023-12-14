@@ -13,8 +13,9 @@ def decrypt_data(data):
 def read_card():
     """Lee datos de una tarjeta RFID."""
     try:
-        id, data = reader.read()
-        return data
+        data = reader.read()
+        card_data = data[1]
+        return card_data
     except Exception as e:
         print(f"Error al leer la tarjeta: {e}")
         return None
@@ -46,7 +47,7 @@ def main():
     hash_sequence = []
 
     for i in range(1, 5):
-        print(f"Acercar la Tarjeta {i} al lector...")
+        input(f"Press Enter after placing Card {i} on the reader...")
         card_data = read_card()
         if card_data:
             decrypted_data = decrypt_data(card_data)
