@@ -1,3 +1,4 @@
+## CARD_CREATOR.PY
 import os
 import dotenv
 import mariadb
@@ -44,7 +45,7 @@ def encrypt_password(password, public_key, hash_algorithm):
     )
 
 def generate_nonce():
-    return random.randbytes(16)
+    return os.urandom(16)
 
 def write_to_card(data):
     try:
