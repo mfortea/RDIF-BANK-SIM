@@ -68,6 +68,8 @@ def verify_and_decrypt_card_data(data, stored_nonce, private_key, hash_algorithm
         print("Error al desencriptar la tarjeta:", str(e))
         return None
 
+# ... (código previo)
+
 # Función principal
 def main():
     # Obtener nombre de usuario
@@ -93,6 +95,7 @@ def main():
                 card_data = data[1]
                 decrypted_data = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
                 if decrypted_data is not None:
+                    print(f"Contraseña válida de la tarjeta {i + 1}: {decrypted_data}")
                     decrypted_passwords.append(decrypted_data)
 
             if len(decrypted_passwords) > 0:
@@ -107,6 +110,9 @@ def main():
         print("Usuario no encontrado en la base de datos.")
 
     conn.close()
+
+# ... (código posterior)
+
 
 # Llamar a la función principal
 if __name__ == "__main__":

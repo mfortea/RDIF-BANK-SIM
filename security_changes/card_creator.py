@@ -50,6 +50,21 @@ def encrypt_password(password, public_key, hash_algorithm):
 def generate_nonce():
     return random.randbytes(16)
 
+# ... (código previo)
+
+# Función para escribir en una tarjeta específica
+def write_to_card(data, card_number):
+    try:
+        print(f"Acerque la tarjeta {card_number + 1} al lector para escribir los datos.")
+        data_str = str(data)  # Convierte data a una cadena (string)
+        reader.write(data_str)
+        print(f"Datos escritos en la tarjeta {card_number + 1}.")
+
+        # Agrega una pausa de 2 segundos
+        time.sleep(2)
+    finally:
+        GPIO.cleanup()
+
 # Función principal
 def main():
     # Cargar clave pública
@@ -87,18 +102,8 @@ def main():
 
     conn.close()
 
-# Función para escribir en la tarjeta
-def write_to_card(data, card_number):
-    try:
-        print(f"Acerque la tarjeta {card_number + 1} al lector para escribir los datos.")
-        data_str = str(data)  # Convierte data a una cadena (string)
-        reader.write(data_str)
-        print(f"Datos escritos en la tarjeta {card_number + 1}.")
+# ... (código posterior)
 
-        # Agrega una pausa de 2 segundos
-        time.sleep(2)
-    finally:
-        GPIO.cleanup()
 
 # Llamar a la función principal
 if __name__ == "__main__":
