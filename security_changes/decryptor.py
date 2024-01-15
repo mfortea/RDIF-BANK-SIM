@@ -31,7 +31,6 @@ conn = mariadb.connect(
     database=os.getenv("DB_NAME")
 )
 cursor = conn.cursor()
-
 # Función para desencriptar la contraseña
 def decrypt_password(encrypted_password, private_key, hash_algorithm):
     decrypted_password = private_key.decrypt(
@@ -53,22 +52,23 @@ def get_nonce_for_user(username):
     else:
         return None
 
-# Función para verificar y desencriptar los datos de la tarjeta
-def verify_and_decrypt_card_data(data, stored_nonce, private_key, hash_algorithm):
+# Función para verificar y desencriptar los datos de una tarjeta específica
+def verify_and_decrypt_card_data(card_data, stored_nonce, private_key, hash_algorithm):
     try:
-        # Desencriptar la información de la tarjeta
-        decrypted_data = decrypt_password(data, private_key, hash_algorithm)
+        decrypted_password = ""
+        for chunk in card_data:
+            # Desencriptar la información de la tarjeta
+            decrypted_chunk = decrypt_password(chunk, private_key, hash_algorithm)
+            decrypted_password += decrypted_chunk
 
         # Verificar el nonce
-        if decrypted_data[-16:] == stored_nonce:
-            return decrypted_data[:-16]  # Devolver la contraseña sin el nonce
+        if decrypted_password[-16:] == stored_nonce:
+            return decrypted_password[:-16]  # Devolver la contraseña sin el nonce
         else:
             return None  # El nonce no coincide, la información es incorrecta
     except Exception as e:
         print("Error al desencriptar la tarjeta:", str(e))
         return None
-
-# ... (código previo)
 
 # Función principal
 def main():
@@ -88,22 +88,19 @@ def main():
 
     if stored_nonce is not None:
         try:
-            decrypted_passwords = []
-            for i in range(4):
+            # Leer las 7 tarjetas RFID
+            card_data = []
+            for i in range(7):
                 print(f"Acerque la tarjeta {i + 1} al lector para verificar los datos.")
                 data = reader.read()
-                card_data = data[1]
-                decrypted_data = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
-                if decrypted_data is not None:
-                    print(f"Contraseña válida de la tarjeta {i + 1}: {decrypted_data}")
-                    decrypted_passwords.append(decrypted_data)
+                card_data.append(data[1])
 
-            if len(decrypted_passwords) > 0:
-                print("Contraseñas válidas:")
-                for password in decrypted_passwords:
-                    print(password)
+            decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
+
+            if decrypted_password is not None:
+                print("Contraseña válida:", decrypted_password)
             else:
-                print("Ninguna tarjeta válida.")
+                print("Información no válida.")
         except Exception as e:
             print("Error al leer las tarjetas:", str(e))
     else:
@@ -111,7 +108,6 @@ def main():
 
     conn.close()
 
-# ... (código posterior)
 
 
 # Llamar a la función principal

@@ -64,6 +64,7 @@ def write_to_card(data, card_number):
         time.sleep(2)
     finally:
         GPIO.cleanup()
+# ... (código previo)
 
 # Función principal
 def main():
@@ -93,16 +94,30 @@ def main():
 
     # Limitar el tamaño de cada parte
     max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
-    for i, part in enumerate(data_parts):
-        while len(part) > max_chunk_size:
-            part_chunk = part[:max_chunk_size]
-            write_to_card(part_chunk, i)  # Escribir la parte en la tarjeta
+
+    # Crear una lista para almacenar las partes divididas en tarjetas
+    card_data = [[] for _ in range(7)]
+
+    for part in data_parts:
+        while len(part) > 0:
+            # Dividir la parte en fragmentos del tamaño máximo de la tarjeta
+            chunk = part[:max_chunk_size]
             part = part[max_chunk_size:]
-        write_to_card(part, i)  # Escribir la parte restante en la tarjeta
+
+            # Agregar el fragmento a la tarjeta correspondiente
+            card_data[0].append(chunk)
+
+    # Escribir en las tarjetas RFID
+    for i, card_chunks in enumerate(card_data):
+        for chunk in card_chunks:
+            write_to_card(chunk, i)  # Escribir el fragmento en la tarjeta
 
     conn.close()
 
-# ... (código posterior)
+# Llamar a la función principal
+if __name__ == "__main__":
+    main()
+
 
 
 # Llamar a la función principal
