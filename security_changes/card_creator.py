@@ -5,8 +5,8 @@ import hashlib
 import random
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.hashes import SHA256
+from cryptography.hazmat.primitives.asymmetric import padding
 from mfrc522 import SimpleMFRC522
 
 padding.OAEP(
@@ -27,15 +27,16 @@ conn = mariadb.connect(
 cursor = conn.cursor()
 
 # Funciones
-def encrypt_password(password, public_key):
+def encrypt_password(password, public_key, hash_algorithm):
     return public_key.encrypt(
         password.encode(),
         padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashlib.sha256()),
-            algorithm=hashlib.sha256(),
+            mgf=padding.MGF1(algorithm=hash_algorithm),
+            algorithm=hash_algorithm,
             label=None
         )
     )
+
 
 def write_to_card(data):
     reader = SimpleMFRC522()
@@ -47,7 +48,7 @@ def write_to_card(data):
         GPIO.cleanup()
 
 def main():
-    # Cargar clave pública
+   # Cargar clave pública
     with open("public_key.pem", "rb") as key_file:
         public_key = serialization.load_pem_public_key(
             key_file.read(),
@@ -59,7 +60,8 @@ def main():
     password = input("Ingrese la contraseña: ")
 
     # Encriptar contraseña
-    encrypted_password = encrypt_password(password, public_key)
+    encrypted_password = encrypt_password(password, public_key, SHA256())
+
 
     # Guardar usuario en la base de datos
     cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, encrypted_password))
