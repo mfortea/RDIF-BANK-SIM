@@ -16,12 +16,14 @@ GPIO.setwarnings(False)
 from mfrc522 import SimpleMFRC522
 reader = SimpleMFRC522()
 
+
 # Configurar el esquema de encriptación
-padding.OAEP(
-    mgf=padding.MGF1(algorithm=SHA256()),
-    algorithm=SHA256(),
-    label=None
+oaep_padding = padding.OAEP(
+mgf=padding.MGF1(algorithm=SHA256()),
+algorithm=SHA256(),
+label=None
 )
+
 
 # Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
