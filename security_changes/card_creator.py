@@ -36,14 +36,10 @@ conn = mariadb.connect(
 cursor = conn.cursor()
 
 # Función para encriptar la contraseña
-def encrypt_password(password, public_key, hash_algorithm):
+def encrypt_password(password, public_key):
     return public_key.encrypt(
-        password.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hash_algorithm),
-            algorithm=hash_algorithm,
-            label=None
-        )
+    password.encode(),
+    oaep_padding
     )
 
 # Función para generar un nonce aleatorio
@@ -64,23 +60,27 @@ def write_to_card(data, card_number):
         time.sleep(2)
     finally:
         GPIO.cleanup()
-# ... (código previo)
+
 
 # Función principal
 def main():
-    # Cargar clave pública
+# Cargar clave pública
     with open("public_key.pem", "rb") as key_file:
         public_key = serialization.load_pem_public_key(
-            key_file.read(),
-            backend=default_backend()
+    key_file.read(),
+    backend=default_backend()
         )
-
     # Obtener nombre de usuario y contraseña
     username = input("Ingrese el nombre de usuario: ")
     password = input("Ingrese la contraseña: ")
 
+    # Validar y limitar el tamaño de la contraseña
+    if len(password) > 40:  # Ejemplo de límite de tamaño
+        print("La contraseña es demasiado larga. Máximo 40 caracteres.")
+        return
+
     # Encriptar contraseña
-    encrypted_password = encrypt_password(password, public_key, SHA256())
+    encrypted_password = encrypt_password(password, public_key)
 
     # Generar nonce
     nonce = generate_nonce()
@@ -94,32 +94,29 @@ def main():
 
     # Limitar el tamaño de cada parte
     max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
+    card_data = [[] for _ in range(len(data_parts))]
 
-    # Crear una lista para almacenar las partes divididas en tarjetas
-    card_data = [[] for _ in range(7)]
-
-    for part in data_parts:
+    for i, part in enumerate(data_parts):
         while len(part) > 0:
-            # Dividir la parte en fragmentos del tamaño máximo de la tarjeta
             chunk = part[:max_chunk_size]
             part = part[max_chunk_size:]
-
-            # Agregar el fragmento a la tarjeta correspondiente
-            card_data[0].append(chunk)
+            card_data[i].append(chunk)
 
     # Escribir en las tarjetas RFID
     for i, card_chunks in enumerate(card_data):
         for chunk in card_chunks:
             write_to_card(chunk, i)  # Escribir el fragmento en la tarjeta
 
+    # Cerrar la conexión a la base de datos
     conn.close()
 
+def cleanup_GPIO():
+    GPIO.cleanup()  
+
+
 # Llamar a la función principal
 if __name__ == "__main__":
-    main()
-
-
-
-# Llamar a la función principal
-if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        cleanup_GPIO()
