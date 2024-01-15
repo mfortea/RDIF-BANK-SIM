@@ -71,5 +71,8 @@ def main():
         write_to_card(chunk)
 
     conn.close()
-    
+
+# Llamar a la función principal
+if __name__ == "__main__":
     main()
+
