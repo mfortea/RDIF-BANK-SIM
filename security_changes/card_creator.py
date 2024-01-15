@@ -1,95 +1,75 @@
-import json
-import base64
+import os
+import dotenv
+import mariadb
 import hashlib
+import random
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import padding
 from mfrc522 import SimpleMFRC522
-import RPi.GPIO as GPIO
 
-# RFID reader setup
-reader = SimpleMFRC522()
+dotenv.load_dotenv()
 
-def generate_hash_sequence(password, count=4):
-    """Generates a hash sequence from a password."""
-    hash_sequence = []
-    current_hash = password.encode()
-    for _ in range(count):
-        current_hash = hashlib.sha256(current_hash).digest()
-        hash_sequence.append(current_hash)
-    return hash_sequence
+# Conectar a la base de datos
+conn = mariadb.connect(
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME")
+)
+cursor = conn.cursor()
 
-def encrypt_data(data):
-    """Encrypts data for storage on the card."""
-    return base64.b64encode(data).decode()
+# Funciones
+def encrypt_password(password, public_key):
+    return public_key.encrypt(
+        password.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashlib.sha256()),
+            algorithm=hashlib.sha256(),
+            label=None
+        )
+    )
 
-def write_card(data):
-    """Writes data to the RFID card."""
+def write_to_card(data):
+    reader = SimpleMFRC522()
     try:
-        print("Approach the card to the reader to write...")
+        print("Acerque la tarjeta al lector para escribir los datos.")
         reader.write(data)
-        print("Data written successfully.")
-    except Exception as e:
-        print(f"Error writing to card: {e}")
-
-def load_users():
-    """Loads user information from a JSON file."""
-    try:
-        with open("users.json", "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return {}
-
-def save_users(users):
-    """Saves user information to a JSON file."""
-    with open("users.json", "w") as file:
-        json.dump(users, file, indent=4)
-
-def add_user(user_id, password):
-    """Adds a new user and writes the hash sequence to RFID cards."""
-    users = load_users()
-    if user_id in users:
-        print("User already exists.")
-        return
-
-    hash_sequence = generate_hash_sequence(password)
-    for i, hash_value in enumerate(hash_sequence, start=1):
-        encrypted_hash = encrypt_data(hash_value)
-        print(f"Writing hash to Card {i}")
-        input(f"Press Enter after placing Card {i} on the reader...")
-        write_card(encrypted_hash)
-
-    users[user_id] = {"hash_sequence": [encrypt_data(h) for h in hash_sequence]}
-    save_users(users)
-
-def remove_user(user_id):
-    """Removes a user from the JSON file."""
-    users = load_users()
-    if user_id in users:
-        del users[user_id]
-        save_users(users)
-        print(f"User {user_id} removed.")
-    else:
-        print("User not found.")
+        print("Datos escritos en la tarjeta.")
+    finally:
+        GPIO.cleanup()
 
 def main():
-    while True:
-        print("\nRFID Card Manager")
-        print("1. Add User and Create Cards")
-        print("2. Remove User")
-        choice = input("Enter your choice (1-2): ")
+    # Cargar clave pública
+    with open("public_key.pem", "rb") as key_file:
+        public_key = serialization.load_pem_public_key(
+            key_file.read(),
+            backend=default_backend()
+        )
 
-        if choice == '1':
-            user_id = input("Enter the user ID: ")
-            password = input("Enter a secure password: ")
-            add_user(user_id, password)
-        elif choice == '2':
-            user_id = input("Enter the user ID to remove: ")
-            remove_user(user_id)
-        else:
-            print("Invalid option.")
+    # Obtener nombre de usuario y contraseña
+    username = input("Ingrese el nombre de usuario: ")
+    password = input("Ingrese la contraseña: ")
 
-        if input("\nDo you want to perform another operation? (yes/no): ").lower() != 'yes':
-            break
+    # Encriptar contraseña
+    encrypted_password = encrypt_password(password, public_key)
 
-    GPIO.cleanup()
+    # Guardar usuario en la base de datos
+    cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, encrypted_password))
+    conn.commit()
 
-if __name__ == "__main__":
-    main()
+    # Preparar datos para las tarjetas RFID
+    nonce = random.randbytes(16)
+    data_chunks = [encrypted_password[i:i + 32] + nonce for i in range(0, len(encrypted_password), 32)]
+
+    # Asegurarse de que cada fragmento tenga 48 bytes
+    for i in range(len(data_chunks)):
+        data_chunks[i] += random.randbytes(48 - len(data_chunks[i]))
+
+    # Escribir en las tarjetas RFID
+    for chunk in data_chunks:
+        write_to_card(chunk)
+
+    conn.close()
+    if name == "main":
+        main()
