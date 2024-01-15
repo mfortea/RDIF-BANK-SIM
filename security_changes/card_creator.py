@@ -8,6 +8,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.asymmetric import padding
 from mfrc522 import SimpleMFRC522
+import time
 
 padding.OAEP(
     mgf=padding.MGF1(algorithm=SHA256()),
@@ -44,6 +45,8 @@ def write_to_card(data):
         print("Acerque la tarjeta al lector para escribir los datos.")
         reader.write(data)
         print("Datos escritos en la tarjeta.")
+        # Agrega una pausa de 2 segundos
+        time.sleep(2)
     finally:
         GPIO.cleanup()
 
