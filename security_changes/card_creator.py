@@ -43,6 +43,8 @@ def encrypt_password(password, public_key, hash_algorithm):
         )
     )
 
+def generate_nonce():
+    return random.randbytes(16)
 
 def write_to_card(data):
     try:
@@ -72,19 +74,22 @@ def main():
     # Encriptar contraseña
     encrypted_password = encrypt_password(password, public_key, SHA256())
 
-    # Guardar usuario en la base de datos
-    cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, encrypted_password))
+    # Generar nonce
+    nonce = generate_nonce()
+
+    # Guardar usuario en la base de datos con el nonce
+    cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", (username, encrypted_password, nonce))
     conn.commit()
 
     # Dividir los datos en cuatro partes iguales
     data_length = len(encrypted_password)
     chunk_size = data_length // 4
 
-    # Escribir en las tarjetas RFID
+    # Escribir en las tarjetas RFID con el nonce
     for i in range(4):
         start_index = i * chunk_size
         end_index = (i + 1) * chunk_size
-        chunk = encrypted_password[start_index:end_index]
+        chunk = encrypted_password[start_index:end_index] + nonce
         write_to_card(chunk)
 
     conn.close()
