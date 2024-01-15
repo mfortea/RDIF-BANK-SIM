@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from mfrc522 import SimpleMFRC522
 import time
 import RPi.GPIO as GPIO
+
 GPIO.setwarnings(False)
 from mfrc522 import SimpleMFRC522
 reader = SimpleMFRC522()
@@ -44,7 +45,6 @@ def encrypt_password(password, public_key, hash_algorithm):
 
 
 def write_to_card(data):
-    reader = SimpleMFRC522()
     try:
         print("Acerque la tarjeta al lector para escribir los datos.")
         data_str = str(data)  # Convierte data a una cadena (string)
@@ -58,7 +58,7 @@ def write_to_card(data):
         
 
 def main():
-   # Cargar clave pública
+    # Cargar clave pública
     with open("public_key.pem", "rb") as key_file:
         public_key = serialization.load_pem_public_key(
             key_file.read(),
@@ -72,21 +72,19 @@ def main():
     # Encriptar contraseña
     encrypted_password = encrypt_password(password, public_key, SHA256())
 
-
     # Guardar usuario en la base de datos
     cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, encrypted_password))
     conn.commit()
 
-    # Preparar datos para las tarjetas RFID
-    nonce = random.randbytes(16)
-    data_chunks = [encrypted_password[i:i + 32] + nonce for i in range(0, len(encrypted_password), 32)]
-
-    # Asegurarse de que cada fragmento tenga 48 bytes
-    for i in range(len(data_chunks)):
-        data_chunks[i] += random.randbytes(48 - len(data_chunks[i]))
+    # Dividir los datos en cuatro partes iguales
+    data_length = len(encrypted_password)
+    chunk_size = data_length // 4
 
     # Escribir en las tarjetas RFID
-    for chunk in data_chunks:
+    for i in range(4):
+        start_index = i * chunk_size
+        end_index = (i + 1) * chunk_size
+        chunk = encrypted_password[start_index:end_index]
         write_to_card(chunk)
 
     conn.close()
@@ -94,4 +92,3 @@ def main():
 # Llamar a la función principal
 if __name__ == "__main__":
     main()
-
