@@ -71,5 +71,5 @@ def main():
         write_to_card(chunk)
 
     conn.close()
-    if name == "main":
-        main()
+    
+    main()
