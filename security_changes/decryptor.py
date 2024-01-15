@@ -69,6 +69,17 @@ def verify_and_decrypt_card_data(card_data, stored_nonce, private_key, hash_algo
     except Exception as e:
         print("Error al desencriptar la tarjeta:", str(e))
         return None
+# ... (código previo)
+
+# Función para leer una tarjeta específica
+def read_card(card_number):
+    try:
+        print(f"Acerque la tarjeta {card_number + 1} al lector para verificar los datos.")
+        _, data_str = reader.read()
+        return data_str
+    except Exception as e:
+        print(f"Error al leer la tarjeta {card_number + 1}:", str(e))
+        return None
 
 # Función principal
 def main():
@@ -88,12 +99,11 @@ def main():
 
     if stored_nonce is not None:
         try:
-            # Leer las 7 tarjetas RFID
             card_data = []
             for i in range(7):
-                print(f"Acerque la tarjeta {i + 1} al lector para verificar los datos.")
-                data = reader.read()
-                card_data.append(data[1])
+                data = read_card(i)
+                if data is not None:
+                    card_data.append(data)
 
             decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
 
@@ -107,6 +117,13 @@ def main():
         print("Usuario no encontrado en la base de datos.")
 
     conn.close()
+
+# ... (código posterior)
+
+# Llamar a la función principal
+if __name__ == "__main__":
+    main()
+
 
 
 
