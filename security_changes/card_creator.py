@@ -47,12 +47,15 @@ def write_to_card(data):
     reader = SimpleMFRC522()
     try:
         print("Acerque la tarjeta al lector para escribir los datos.")
-        reader.write(data)
+        data_str = str(data)  # Convierte data a una cadena (string)
+        reader.write(data_str)
         print("Datos escritos en la tarjeta.")
+        
         # Agrega una pausa de 2 segundos
         time.sleep(2)
     finally:
         GPIO.cleanup()
+        
 
 def main():
    # Cargar clave pública
