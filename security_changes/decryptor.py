@@ -69,7 +69,7 @@ def main():
     username = input("Ingrese el nombre de usuario: ")
 
     # Obtener la clave privada del usuario
-    with open(f"{username}_private_key.pem", "rb") as key_file:
+    with open(f"private_key.pem", "rb") as key_file:
         private_key = serialization.load_pem_private_key(
             key_file.read(),
             password=None,
