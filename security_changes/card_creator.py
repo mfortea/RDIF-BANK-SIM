@@ -9,6 +9,10 @@ from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.asymmetric import padding
 from mfrc522 import SimpleMFRC522
 import time
+import RPi.GPIO as GPIO
+GPIO.setwarnings(False)
+from mfrc522 import SimpleMFRC522
+reader = SimpleMFRC522()
 
 padding.OAEP(
     mgf=padding.MGF1(algorithm=SHA256()),
