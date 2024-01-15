@@ -1,3 +1,4 @@
+# DECRYPTOR.PY
 import os
 import dotenv
 import mariadb
@@ -48,23 +49,12 @@ def main():
             continue
 
         stored_encrypted_password_hex, stored_nonce_hex = user_data
-        stored_encrypted_password = bytes.fromhex(stored_encrypted_password_hex)
         stored_nonce = bytes.fromhex(stored_nonce_hex)
 
-        print(f"Stored Encrypted Password (Hex): {stored_encrypted_password_hex}")
-        print(f"Stored Nonce (Hex): {stored_nonce_hex}")
-        print(f"Stored Encrypted Password (Bytes): {stored_encrypted_password}")
-        print(f"Stored Nonce (Bytes): {stored_nonce}")
-
         card_nonce = read_data(2, simulation_mode)  # Índice 0 para nonce
-        print(f"Card Nonce (Bytes): {card_nonce}")
 
 
         if card_nonce != stored_nonce:
-            print("Nonces do not match. Possible tampering detected.")
-            print(f"Card Nonce: {card_nonce}")
-            print(f"Stored Nonce: {stored_nonce}")
-            print("Access Denied: Card has been tampered with.")
             continue
 
         card_encrypted_password_hex = read_data(3, simulation_mode)  # Índice 3 para la contraseña encriptada
@@ -77,18 +67,11 @@ def main():
         aes_key_part2 = read_data(1, simulation_mode)
         aes_key = aes_key_part1 + aes_key_part2
 
-        print(f"AES Key DECRYPTOR: {aes_key.hex()}")
-        print(f"Card Encrypted Password (Bytes): {card_encrypted_password}")
-
         # Desencriptar contraseña
         decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
-        print(f"Decrypted Password (Bytes): {decrypted_password_bytes}")
         
         # Comparar hashes de contraseñas
-        print(f"Stored Encrypted Password (For Comparison): {stored_encrypted_password_hex}")
-        # Comparar hashes de contraseñas
         decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
-        print(f"Decrypted Password Hash: {decrypted_password_hash}")
         is_valid = decrypted_password_hash == stored_encrypted_password_hex
 
         # Acceso al sistema

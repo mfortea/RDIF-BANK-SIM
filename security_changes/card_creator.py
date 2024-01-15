@@ -1,3 +1,5 @@
+# CARD_CREATOR.PY
+
 import os
 import dotenv
 import mariadb
@@ -26,7 +28,6 @@ cursor = conn.cursor()
 
 # Generar clave AES y nonce
 aes_key = os.urandom(32) 
-print(f"AES Key ORIGINAL: {aes_key.hex()}")
 nonce = random.randbytes(16) 
 
 def encrypt_aes(data, key, nonce):
