@@ -1,27 +1,14 @@
-# Importar bibliotecas necesarias
 import os
 import dotenv
 import mariadb
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.hashes import SHA256
-from mfrc522 import SimpleMFRC522
-import RPi.GPIO as GPIO
+import hashlib
 
-GPIO.setwarnings(False)
-from mfrc522 import SimpleMFRC522
-reader = SimpleMFRC522()
-
-# Configurar el esquema de encriptación
-padding.OAEP(
-    mgf=padding.MGF1(algorithm=SHA256()),
-    algorithm=SHA256(),
-    label=None
-)
-
-# Cargar variables de entorno desde el archivo .env
+# Cargar variables de entorno
 dotenv.load_dotenv()
+simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
+enable_encryption = os.getenv("ENABLE_ENCRYPTION", "True").lower() == "true"
 
 # Conectar a la base de datos
 conn = mariadb.connect(
@@ -31,102 +18,86 @@ conn = mariadb.connect(
     database=os.getenv("DB_NAME")
 )
 cursor = conn.cursor()
-# Función para desencriptar la contraseña
-def decrypt_password(encrypted_password, private_key, hash_algorithm):
-    decrypted_password = private_key.decrypt(
-        encrypted_password,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hash_algorithm),
-            algorithm=hash_algorithm,
-            label=None
-        )
-    )
-    return decrypted_password.decode()
 
-# Obtener el nonce de la base de datos para un usuario específico
-def get_nonce_for_user(username):
-    cursor.execute("SELECT nonce FROM users WHERE username = ?", (username,))
-    result = cursor.fetchone()
-    if result:
-        return result[0]
+def decrypt_aes(encrypted_data, key, nonce):
+    if isinstance(encrypted_data, str):
+        encrypted_data = bytes.fromhex(encrypted_data)  # Convertir de hex a bytes si es necesario
+    cipher = Cipher(algorithms.AES(key), modes.CTR(nonce), backend=default_backend())
+    decryptor = cipher.decryptor()
+    return decryptor.update(encrypted_data) + decryptor.finalize()
+
+
+def read_data(index, simulation):
+    if simulation:
+        with open(f"card_{index}.txt", "r") as file:
+            return bytes.fromhex(file.read())
     else:
-        return None
+        # Implementación para leer de tarjetas RFID
+        pass
 
-# Función para verificar y desencriptar los datos de una tarjeta específica
-def verify_and_decrypt_card_data(card_data, stored_nonce, private_key, hash_algorithm):
-    try:
-        decrypted_password = ""
-        for chunk in card_data:
-            # Desencriptar la información de la tarjeta
-            decrypted_chunk = decrypt_password(chunk, private_key, hash_algorithm)
-            decrypted_password += decrypted_chunk
 
-        # Verificar el nonce
-        if decrypted_password[-16:] == stored_nonce:
-            return decrypted_password[:-16]  # Devolver la contraseña sin el nonce
-        else:
-            return None  # El nonce no coincide, la información es incorrecta
-    except Exception as e:
-        print("Error al desencriptar la tarjeta:", str(e))
-        return None
-# ... (código previo)
 
-# Función para leer una tarjeta específica
-def read_card(card_number):
-    try:
-        print(f"Acerque la tarjeta {card_number + 1} al lector para verificar los datos.")
-        _, data_str = reader.read()
-        return data_str
-    except Exception as e:
-        print(f"Error al leer la tarjeta {card_number + 1}:", str(e))
-        return None
-
-# Función principal
 def main():
-    # Obtener nombre de usuario
-    username = input("Ingrese el nombre de usuario: ")
+    while True:
+        username = input("Enter username: ")
+        cursor.execute("SELECT password, nonce FROM users WHERE username=?", (username,))
+        user_data = cursor.fetchone()
 
-    # Obtener la clave privada del usuario
-    with open(f"private_key.pem", "rb") as key_file:
-        private_key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=None,
-            backend=default_backend()
-        )
+        if not user_data:
+            print("Username doesn't exist.")
+            continue
 
-    # Leer el nonce del usuario
-    stored_nonce = get_nonce_for_user(username)
+        stored_encrypted_password_hex, stored_nonce_hex = user_data
+        stored_encrypted_password = bytes.fromhex(stored_encrypted_password_hex)
+        stored_nonce = bytes.fromhex(stored_nonce_hex)
 
-    if stored_nonce is not None:
-        try:
-            card_data = []
-            for i in range(7):
-                data = read_card(i)
-                if data is not None:
-                    card_data.append(data)
+        print(f"Stored Encrypted Password (Hex): {stored_encrypted_password_hex}")
+        print(f"Stored Nonce (Hex): {stored_nonce_hex}")
+        print(f"Stored Encrypted Password (Bytes): {stored_encrypted_password}")
+        print(f"Stored Nonce (Bytes): {stored_nonce}")
 
-            decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
+        card_nonce = read_data(2, simulation_mode)  # Índice 0 para nonce
+        print(f"Card Nonce (Bytes): {card_nonce}")
 
-            if decrypted_password is not None:
-                print("Contraseña válida:", decrypted_password)
-            else:
-                print("Información no válida.")
-        except Exception as e:
-            print("Error al leer las tarjetas:", str(e))
-    else:
-        print("Usuario no encontrado en la base de datos.")
 
+        if card_nonce != stored_nonce:
+            print("Nonces do not match. Possible tampering detected.")
+            print(f"Card Nonce: {card_nonce}")
+            print(f"Stored Nonce: {stored_nonce}")
+            print("Access Denied: Card has been tampered with.")
+            continue
+
+        card_encrypted_password_hex = read_data(3, simulation_mode)  # Índice 3 para la contraseña encriptada
+        if isinstance(card_encrypted_password_hex, str):
+            card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
+        else:
+            card_encrypted_password = card_encrypted_password_hex
+
+        aes_key_part1 = read_data(0, simulation_mode)
+        aes_key_part2 = read_data(1, simulation_mode)
+        aes_key = aes_key_part1 + aes_key_part2
+
+        print(f"AES Key DECRYPTOR: {aes_key.hex()}")
+        print(f"Card Encrypted Password (Bytes): {card_encrypted_password}")
+
+        # Desencriptar contraseña
+        decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
+        print(f"Decrypted Password (Bytes): {decrypted_password_bytes}")
+        
+        # Comparar hashes de contraseñas
+        print(f"Stored Encrypted Password (For Comparison): {stored_encrypted_password_hex}")
+        # Comparar hashes de contraseñas
+        decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
+        print(f"Decrypted Password Hash: {decrypted_password_hash}")
+        is_valid = decrypted_password_hash == stored_encrypted_password_hex
+
+        # Acceso al sistema
+        print("Access Granted" if is_valid else "Access Denied")
+        break
+
+    # Cerrar la conexión a la base de datos
     conn.close()
 
-# ... (código posterior)
-
-# Llamar a la función principal
 if __name__ == "__main__":
     main()
 
-
-
-
-# Llamar a la función principal
-if __name__ == "__main__":
-    main()

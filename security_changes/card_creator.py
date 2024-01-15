@@ -1,32 +1,19 @@
-# Importar bibliotecas necesarias
 import os
 import dotenv
 import mariadb
-import hashlib
-import random
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives.asymmetric import padding
-from mfrc522 import SimpleMFRC522
-import time
-import RPi.GPIO as GPIO
-
-GPIO.setwarnings(False)
-from mfrc522 import SimpleMFRC522
-reader = SimpleMFRC522()
-
-
-# Configurar el esquema de encriptación
-oaep_padding = padding.OAEP(
-mgf=padding.MGF1(algorithm=SHA256()),
-algorithm=SHA256(),
-label=None
-)
-
+import random
+import hashlib
 
 # Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
+simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
+
+# Solo importar bibliotecas RFID si no estamos en modo de simulación
+if not simulation_mode:
+    from mfrc522 import SimpleMFRC522
+    import RPi.GPIO as GPIO
 
 # Conectar a la base de datos
 conn = mariadb.connect(
@@ -37,83 +24,87 @@ conn = mariadb.connect(
 )
 cursor = conn.cursor()
 
-# Función para encriptar la contraseña
-def encrypt_password(password, public_key):
-    return public_key.encrypt(
-    password.encode(),
-    oaep_padding
-    )
+# Generar clave AES y nonce
+aes_key = os.urandom(32) 
+print(f"AES Key ORIGINAL: {aes_key.hex()}")
+nonce = random.randbytes(16) 
+
+def encrypt_aes(data, key, nonce):
+    if isinstance(data, str):
+        data = data.encode()
+    cipher = Cipher(algorithms.AES(key), modes.CTR(nonce), backend=default_backend())
+    encryptor = cipher.encryptor()
+    return encryptor.update(data) + encryptor.finalize()
+
 
 # Función para generar un nonce aleatorio
 def generate_nonce():
     return random.randbytes(16)
 
-# ... (código previo)
+def write_data(data, index, simulation):
+    if simulation:
+        with open(f"card_{index}.txt", "w") as file:
+            if isinstance(data, bytes):
+                file.write(data.hex())  # Si es bytes, convertir a hexadecimal
+            else:
+                file.write(data)  # Si ya es una cadena, escribir directamente
+    else:
+        # Escribir datos en una tarjeta real
+        reader = SimpleMFRC522()
+        try:
+            reader.write(data)
+        finally:
+            # Limpiar los pines GPIO
+            GPIO.cleanup()
 
-# Función para escribir en una tarjeta específica
-def write_to_card(data, card_number):
-    try:
-        print(f"Acerque la tarjeta {card_number + 1} al lector para escribir los datos.")
-        data_str = str(data)  # Convierte data a una cadena (string)
-        reader.write(data_str)
-        print(f"Datos escritos en la tarjeta {card_number + 1}.")
-
-        # Agrega una pausa de 2 segundos
-        time.sleep(2)
-    finally:
-        GPIO.cleanup()
-
-
-# Función principal
 def main():
-# Cargar clave pública
-    with open("public_key.pem", "rb") as key_file:
-        public_key = serialization.load_pem_public_key(
-    key_file.read(),
-    backend=default_backend()
-        )
+    enable_encryption = os.getenv("ENABLE_ENCRYPTION", "True").lower() == "true"
+    simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
+
     # Obtener nombre de usuario y contraseña
-    username = input("Ingrese el nombre de usuario: ")
-    password = input("Ingrese la contraseña: ")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
 
     # Validar y limitar el tamaño de la contraseña
-    if len(password) > 40:  # Ejemplo de límite de tamaño
-        print("La contraseña es demasiado larga. Máximo 40 caracteres.")
+    if len(password) > 16:
+        print("Password is too long. Maximum 16 characters.")
         return
 
-    # Encriptar contraseña
-    encrypted_password = encrypt_password(password, public_key)
+    if enable_encryption:
+        encrypted_password = encrypt_aes(password, aes_key, nonce)
+    else:
+        encrypted_password = password.encode()  # Asegúrate de que sea bytes
 
-    # Generar nonce
-    nonce = generate_nonce()
 
     # Guardar usuario en la base de datos con el nonce
-    cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", (username, encrypted_password, nonce))
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", 
+                   (username, password_hash, nonce.hex()))
+
     conn.commit()
 
     # Dividir la información y escribir en las tarjetas
-    data_parts = [nonce, public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo), encrypted_password]
-
-    # Limitar el tamaño de cada parte
+    data_parts = [aes_key.hex(), nonce.hex(), encrypted_password.hex()]  # Convertir a hexadecimal
     max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
-    card_data = [[] for _ in range(len(data_parts))]
+    card_data = []
 
-    for i, part in enumerate(data_parts):
+    for part in data_parts:
         while len(part) > 0:
             chunk = part[:max_chunk_size]
             part = part[max_chunk_size:]
-            card_data[i].append(chunk)
+            card_data.append(chunk)
 
-    # Escribir en las tarjetas RFID
-    for i, card_chunks in enumerate(card_data):
-        for chunk in card_chunks:
-            write_to_card(chunk, i)  # Escribir el fragmento en la tarjeta
+    # Escribir en las tarjetas RFID o en archivos de simulación
+    for i, chunk in enumerate(card_data):
+        write_data(chunk, i, simulation_mode)
 
     # Cerrar la conexión a la base de datos
     conn.close()
 
+
 def cleanup_GPIO():
-    GPIO.cleanup()  
+    if not simulation_mode:
+        GPIO.cleanup()
 
 
 # Llamar a la función principal
@@ -121,4 +112,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
-        cleanup_GPIO()
+        if not simulation_mode:
+            cleanup_GPIO()
