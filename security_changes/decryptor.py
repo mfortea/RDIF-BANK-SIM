@@ -1,4 +1,4 @@
-## DECRYPTOR.PY
+# Importar bibliotecas necesarias
 import os
 import dotenv
 import mariadb
@@ -13,12 +13,14 @@ GPIO.setwarnings(False)
 from mfrc522 import SimpleMFRC522
 reader = SimpleMFRC522()
 
+# Configurar el esquema de encriptación
 padding.OAEP(
     mgf=padding.MGF1(algorithm=SHA256()),
     algorithm=SHA256(),
     label=None
 )
 
+# Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
 
 # Conectar a la base de datos
@@ -51,6 +53,7 @@ def get_nonce_for_user(username):
     else:
         return None
 
+# Función para verificar y desencriptar los datos de la tarjeta
 def verify_and_decrypt_card_data(data, stored_nonce, private_key, hash_algorithm):
     try:
         # Desencriptar la información de la tarjeta
@@ -65,6 +68,7 @@ def verify_and_decrypt_card_data(data, stored_nonce, private_key, hash_algorithm
         print("Error al desencriptar la tarjeta:", str(e))
         return None
 
+# Función principal
 def main():
     # Obtener nombre de usuario
     username = input("Ingrese el nombre de usuario: ")
@@ -82,16 +86,21 @@ def main():
 
     if stored_nonce is not None:
         try:
-            print("Acerque la tarjeta al lector para verificar los datos.")
-            _, card_data = reader.read()
-            decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
+            decrypted_passwords = []
+            for i in range(4):
+                print(f"Acerque la tarjeta {i + 1} al lector para verificar los datos.")
+                data = reader.read()
+                card_data = data[1]
+                decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
+                if decrypted_password is not None:
+                    decrypted_passwords.append(decrypted_password)
 
-            if decrypted_password is not None:
-                print("Contraseña válida:", decrypted_password)
+            if len(decrypted_passwords) > 0:
+                print("Contraseñas válidas:", decrypted_passwords)
             else:
-                print("Información no válida.")
+                print("Ninguna tarjeta válida.")
         except Exception as e:
-            print("Error al leer la tarjeta:", str(e))
+            print("Error al leer las tarjetas:", str(e))
     else:
         print("Usuario no encontrado en la base de datos.")
 

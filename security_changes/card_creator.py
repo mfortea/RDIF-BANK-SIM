@@ -1,4 +1,4 @@
-## CARD_CREATOR.PY
+# Importar bibliotecas necesarias
 import os
 import dotenv
 import mariadb
@@ -16,12 +16,14 @@ GPIO.setwarnings(False)
 from mfrc522 import SimpleMFRC522
 reader = SimpleMFRC522()
 
+# Configurar el esquema de encriptación
 padding.OAEP(
     mgf=padding.MGF1(algorithm=SHA256()),
     algorithm=SHA256(),
     label=None
 )
 
+# Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
 
 # Conectar a la base de datos
@@ -33,7 +35,7 @@ conn = mariadb.connect(
 )
 cursor = conn.cursor()
 
-# Funciones
+# Función para encriptar la contraseña
 def encrypt_password(password, public_key, hash_algorithm):
     return public_key.encrypt(
         password.encode(),
@@ -44,22 +46,11 @@ def encrypt_password(password, public_key, hash_algorithm):
         )
     )
 
+# Función para generar un nonce aleatorio
 def generate_nonce():
-    return os.urandom(16)
+    return random.randbytes(16)
 
-def write_to_card(data):
-    try:
-        print("Acerque la tarjeta al lector para escribir los datos.")
-        data_str = str(data)  # Convierte data a una cadena (string)
-        reader.write(data_str)
-        print("Datos escritos en la tarjeta.")
-        
-        # Agrega una pausa de 2 segundos
-        time.sleep(2)
-    finally:
-        GPIO.cleanup()
-        
-
+# Función principal
 def main():
     # Cargar clave pública
     with open("public_key.pem", "rb") as key_file:
@@ -82,18 +73,32 @@ def main():
     cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", (username, encrypted_password, nonce))
     conn.commit()
 
-    # Dividir los datos en cuatro partes iguales
-    data_length = len(encrypted_password)
-    chunk_size = data_length // 4
+    # Dividir la información en partes iguales
+    data_parts = [username.encode(), public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo), encrypted_password]
 
-    # Escribir en las tarjetas RFID con el nonce
-    for i in range(4):
-        start_index = i * chunk_size
-        end_index = (i + 1) * chunk_size
-        chunk = encrypted_password[start_index:end_index] + nonce
-        write_to_card(chunk)
+    # Limitar el tamaño de cada parte
+    max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
+    for i, part in enumerate(data_parts):
+        while len(part) > max_chunk_size:
+            part_chunk = part[:max_chunk_size]
+            write_to_card(part_chunk, i)  # Escribir la parte en la tarjeta
+            part = part[max_chunk_size:]
+        write_to_card(part, i)  # Escribir la parte restante en la tarjeta
 
     conn.close()
+
+# Función para escribir en la tarjeta
+def write_to_card(data, card_number):
+    try:
+        print(f"Acerque la tarjeta {card_number + 1} al lector para escribir los datos.")
+        data_str = str(data)  # Convierte data a una cadena (string)
+        reader.write(data_str)
+        print(f"Datos escritos en la tarjeta {card_number + 1}.")
+
+        # Agrega una pausa de 2 segundos
+        time.sleep(2)
+    finally:
+        GPIO.cleanup()
 
 # Llamar a la función principal
 if __name__ == "__main__":
