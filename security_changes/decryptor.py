@@ -91,12 +91,14 @@ def main():
                 print(f"Acerque la tarjeta {i + 1} al lector para verificar los datos.")
                 data = reader.read()
                 card_data = data[1]
-                decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
-                if decrypted_password is not None:
-                    decrypted_passwords.append(decrypted_password)
+                decrypted_data = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
+                if decrypted_data is not None:
+                    decrypted_passwords.append(decrypted_data)
 
             if len(decrypted_passwords) > 0:
-                print("Contraseñas válidas:", decrypted_passwords)
+                print("Contraseñas válidas:")
+                for password in decrypted_passwords:
+                    print(password)
             else:
                 print("Ninguna tarjeta válida.")
         except Exception as e:

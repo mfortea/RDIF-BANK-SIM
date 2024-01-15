@@ -73,8 +73,8 @@ def main():
     cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", (username, encrypted_password, nonce))
     conn.commit()
 
-    # Dividir la información en partes iguales
-    data_parts = [username.encode(), public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo), encrypted_password]
+    # Dividir la información y escribir en las tarjetas
+    data_parts = [nonce, public_key.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo), encrypted_password]
 
     # Limitar el tamaño de cada parte
     max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
