@@ -82,7 +82,8 @@ def main():
     if stored_nonce is not None:
         try:
             print("Acerque la tarjeta al lector para verificar los datos.")
-            card_data = reader.read()
+            data = reader.read()
+            card_data = data[1]
             decrypted_password = verify_and_decrypt_card_data(card_data, stored_nonce, private_key, SHA256())
 
             if decrypted_password is not None:
