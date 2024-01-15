@@ -6,7 +6,14 @@ import random
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.hashes import SHA256
 from mfrc522 import SimpleMFRC522
+
+padding.OAEP(
+    mgf=padding.MGF1(algorithm=SHA256()),
+    algorithm=SHA256(),
+    label=None
+)
 
 dotenv.load_dotenv()
 
