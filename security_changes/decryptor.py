@@ -36,8 +36,6 @@ def read_data(index, simulation):
         # Implementación para leer de tarjetas RFID
         pass
 
-
-
 def main():
     while True:
         username = input("Enter username: ")
@@ -52,7 +50,6 @@ def main():
         stored_nonce = bytes.fromhex(stored_nonce_hex)
 
         card_nonce = read_data(2, simulation_mode)  # Índice 0 para nonce
-
 
         if card_nonce != stored_nonce:
             continue
