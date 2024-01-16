@@ -46,6 +46,7 @@ def read_data(index, simulation):
             print(f"Approach card {index + 1} to the RFID reader...")
             data = reader.read()
             card_data = data[1]
+            print(f"Data from card {index + 1} read.")
             time.sleep(2)
             return card_data.strip()
         finally:
@@ -71,6 +72,7 @@ def main():
         print("ESTE ES EL NONCE QUE HAY EN LA TARJETA: ",{card_nonce})
         card_encrypted_password_hex = read_data(3, simulation_mode)
         print("ESTE ES EL NONCE QUE HAY EN LA BD: ",{stored_nonce})
+        card_nonce = bytes.fromhex(card_nonce)
 
         if card_nonce != stored_nonce:
             print("Nonce mismatch. Access Denied.")
