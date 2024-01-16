@@ -23,10 +23,6 @@ def on_error(ws, error):
 def on_close(ws):
     print("### Conexión cerrada ###")
 
-def on_open(ws):
-    # Aquí se enviarán los datos de las tarjetas al servidor
-    pass
-
 
 def read_data_from_cards(simulation):
     if simulation:
@@ -48,7 +44,7 @@ def read_data_from_cards(simulation):
                 print(f"\nApproach card {i + 1} to the RFID reader...")
                 id, data = reader.read()
                 card_data.append(data.strip())
-                print(f"Card {i + 1} read <<< Remove the card")
+                print(f"-> Card {i + 1} read || Please, remove the card")
                 time.sleep(2)
             return card_data
         finally:
@@ -66,16 +62,17 @@ def send_card_data_to_server(ws, card_data, username):
 
 def on_open(ws):
     global username
-    print("Conectando al servidor...")
+    print("Connecting to server ...")
     username = input("Enter username: ")
-    print("Enviando nombre de usuario al servidor...")
+    print("Sending username ...")
     ws.send(json.dumps({'type': 'username', 'data': username}))
 
 def on_message(ws, message):
-    print("\n-> SERVER MESSAGE: " + message)
+    data_message = message.get('data')
+    print("\n-> SERVER MESSAGE: " + data_message)
     response = json.loads(message)
     if response.get('type') == 'request_cards':
-        print("Enviando datos de las tarjetas al servidor...")
+        print("Sending card data ...")
         card_data = read_data_from_cards(simulation_mode)
         send_card_data_to_server(ws, card_data, username)
 

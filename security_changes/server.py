@@ -112,7 +112,7 @@ async def handler(websocket, path):
             await websocket.send(json.dumps({'type': 'error', 'data': 'Usuario no existe.'}))
             return
         else:
-            await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Por favor, envíe los datos de las tarjetas.'}))
+            await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Please, send card data'}))
 
         # Esperar los datos de las tarjetas
         print("Esperando datos de las tarjetas...")
