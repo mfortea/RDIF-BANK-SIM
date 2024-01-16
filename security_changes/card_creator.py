@@ -97,10 +97,13 @@ def main():
             part = part[max_chunk_size:]
             card_data.append(chunk)
 
+    # Rellenar card_data para asegurarse de que siempre hay 4 elementos
+    while len(card_data) < 4:
+        card_data.append("")
+
     # Escribir en las tarjetas RFID o en archivos de simulación
     for i, chunk in enumerate(card_data):
         write_data(chunk, i, simulation_mode)
-
     # Cerrar la conexión a la base de datos
     conn.close()
 

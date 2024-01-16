@@ -64,20 +64,19 @@ def main():
         stored_encrypted_password_hex, stored_nonce_hex = user_data
         stored_nonce = bytes.fromhex(stored_nonce_hex)
 
-        card_nonce = read_data(2, simulation_mode)  # Índice 0 para nonce
-
-        if card_nonce != stored_nonce:
-            continue
-
-        card_encrypted_password_hex = read_data(3, simulation_mode)  # Índice 3 para la contraseña encriptada
-        if isinstance(card_encrypted_password_hex, str):
-            card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
-        else:
-            card_encrypted_password = card_encrypted_password_hex
-
         aes_key_part1 = read_data(0, simulation_mode)
         aes_key_part2 = read_data(1, simulation_mode)
+        card_nonce = read_data(2, simulation_mode)
+        card_encrypted_password_hex = read_data(3, simulation_mode)
+
+        # Verificar que el nonce de la tarjeta coincide con el almacenado
+        stored_nonce = bytes.fromhex(stored_nonce_hex)
+        if card_nonce != stored_nonce:
+            print("Nonce mismatch. Access Denied.")
+            continue
+
         aes_key = aes_key_part1 + aes_key_part2
+        card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
 
         # Desencriptar contraseña
         decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
@@ -89,6 +88,7 @@ def main():
         # Acceso al sistema
         print("Access Granted!" if is_valid else "Access Denied")
         break
+
 
     # Cerrar la conexión a la base de datos
     conn.close()
