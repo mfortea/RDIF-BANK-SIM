@@ -1,3 +1,5 @@
+# CLIENT.PY
+
 import os
 import websocket
 import json
@@ -12,8 +14,8 @@ dotenv.load_dotenv('.env.client')
 SERVER_IP = os.getenv("SERVER_IP")
 SERVER_PORT = os.getenv("SERVER_PORT")
 
-def on_message(ws, message):
-    print("Mensaje recibido: " + message)
+simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
+actual_username = ""
 
 def on_error(ws, error):
     print(error)
@@ -62,12 +64,19 @@ def send_card_data_to_server(ws, card_data, username):
         ws.send(message)
 
 def on_open(ws):
-    # Leer los datos de las tarjetas o de los ficheros de simulación
-    simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
-    card_data = read_data_from_cards(simulation_mode)
-
+    print("Conectando al servidor...")
     username = input("Enter username: ")
-    send_card_data_to_server(ws, card_data, username)
+    actual_username = username
+    print("Enviando nombre de usuario al servidor...")
+    ws.send(json.dumps({'type': 'username', 'data': username}))
+
+def on_message(ws, message):
+    print("Mensaje recibido: " + message)
+    response = json.loads(message)
+    if response.get('type') == 'request_cards':
+        print("Enviando datos de las tarjetas al servidor...")
+        card_data = read_data_from_cards(simulation_mode)
+        send_card_data_to_server(ws, card_data, username)
 
 
 if __name__ == "__main__":

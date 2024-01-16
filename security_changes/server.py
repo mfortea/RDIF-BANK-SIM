@@ -1,3 +1,5 @@
+# SERVER.PY
+
 import os
 import dotenv
 import mariadb
@@ -86,17 +88,35 @@ async def authenticate_user(data):
 
 async def handler(websocket, path):
     try:
-        # Esperar a recibir mensaje del cliente
-        message = await websocket.recv()
-        data = json.loads(message)
+        print("Cliente conectado. Esperando nombre de usuario...")
+        # Recibir el nombre de usuario
+        username_message = await websocket.recv()
+        username_data = json.loads(username_message)
+        username = username_data.get('data')
+
+        # Verificar si el usuario existe en la base de datos
+        conn = mariadb.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(1) FROM users WHERE username=?", (username,))
+        if cursor.fetchone()[0] == 0:
+            await websocket.send(json.dumps({'type': 'error', 'data': 'Usuario no existe.'}))
+            return
+        else:
+            await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Por favor, envíe los datos de las tarjetas.'}))
+
+        # Esperar los datos de las tarjetas
+        print("Esperando datos de las tarjetas...")
+        card_data_message = await websocket.recv()
+        card_data = json.loads(card_data_message)
 
         # Autenticar al usuario
-        is_valid, response = await authenticate_user(data)
+        is_valid, response = await authenticate_user(card_data)
 
         # Enviar respuesta al cliente
-        await websocket.send(response)
+        await websocket.send(json.dumps({'type': 'auth_result', 'data': response}))
     except websockets.exceptions.ConnectionClosedError:
         print("Conexión cerrada inesperadamente.")
+
 
 
 # Crear un servidor WebSocket
