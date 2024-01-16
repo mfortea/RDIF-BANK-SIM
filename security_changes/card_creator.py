@@ -17,6 +17,7 @@ simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
 if not simulation_mode:
     from mfrc522 import SimpleMFRC522
     import RPi.GPIO as GPIO
+    GPIO.setwarnings(False)
 
 # Conectar a la base de datos
 conn = mariadb.connect(

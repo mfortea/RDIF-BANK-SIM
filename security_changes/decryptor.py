@@ -16,6 +16,7 @@ enable_encryption = os.getenv("ENABLE_ENCRYPTION", "True").lower() == "true"
 if not simulation_mode:
     from mfrc522 import SimpleMFRC522
     import RPi.GPIO as GPIO
+    GPIO.setwarnings(False)
 
 
 # Conectar a la base de datos
@@ -67,10 +68,10 @@ def main():
         aes_key_part1 = read_data(0, simulation_mode)
         aes_key_part2 = read_data(1, simulation_mode)
         card_nonce = read_data(2, simulation_mode)
+        print("ESTE ES EL NONCE QUE HAY EN LA TARJETA: ",{card_nonce})
         card_encrypted_password_hex = read_data(3, simulation_mode)
+        print("ESTE ES EL NONCE QUE HAY EN LA BD: ",{stored_nonce})
 
-        # Verificar que el nonce de la tarjeta coincide con el almacenado
-        stored_nonce = bytes.fromhex(stored_nonce_hex)
         if card_nonce != stored_nonce:
             print("Nonce mismatch. Access Denied.")
             continue
