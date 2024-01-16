@@ -60,6 +60,7 @@ async def authenticate_user(data):
         # Descomponer los datos recibidos
         username, aes_key, card_nonce, card_encrypted_password_hex = data
         cursor.execute("SELECT password, nonce FROM users WHERE username=?", (username,))
+        print("HE RECIBIDO EL USUARIO: ", {username})
         user_data = cursor.fetchone()
 
         if not user_data:

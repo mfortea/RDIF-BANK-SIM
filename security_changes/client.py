@@ -48,6 +48,7 @@ def read_data_from_cards(simulation):
                 print(f"Approach card {i + 1} to the RFID reader...")
                 id, data = reader.read()
                 card_data.append(data.strip())
+                print(f"Card {i + 1} read <<< Remove the card")
                 time.sleep(2)
             return card_data
         finally:
