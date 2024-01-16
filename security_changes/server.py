@@ -58,24 +58,26 @@ async def authenticate_user(data):
         cursor = conn.cursor()
 
         # Descomponer los datos recibidos
-        json_data = json.loads(data)
-        username = json_data['username']
+        username = data.get('username')
+        aes_key = bytes.fromhex(data.get('aes_key'))
+        card_nonce = bytes.fromhex(data.get('card_nonce'))
+        card_encrypted_password_hex = data.get('card_encrypted_password_hex')
 
-        #username, aes_key, card_nonce, card_encrypted_password_hex = data
+        print("EL USUARIO RECIBIDO ES: " + username)
+        # Comprobar si el usuario existe en la base de datos
         cursor.execute("SELECT password, nonce FROM users WHERE username=?", (username,))
-        print("HE RECIBIDO EL USUARIO: ", {username})
         user_data = cursor.fetchone()
 
         if not user_data:
             return False, "Username doesn't exist."
 
+        # Comparar el nonce y desencriptar la contraseña
         stored_encrypted_password_hex, stored_nonce_hex = user_data
         stored_nonce = bytes.fromhex(stored_nonce_hex)
 
         if bytes.fromhex(card_nonce) != stored_nonce:
             return False, "Nonce mismatch."
 
-        aes_key = bytes.fromhex(aes_key)
         card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
 
         # Desencriptar contraseña
