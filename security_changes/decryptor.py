@@ -11,6 +11,12 @@ dotenv.load_dotenv()
 simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
 enable_encryption = os.getenv("ENABLE_ENCRYPTION", "True").lower() == "true"
 
+# Solo importar bibliotecas RFID si no estamos en modo de simulación
+if not simulation_mode:
+    from mfrc522 import SimpleMFRC522
+    import RPi.GPIO as GPIO
+
+
 # Conectar a la base de datos
 conn = mariadb.connect(
     user=os.getenv("DB_USER"),
@@ -33,8 +39,15 @@ def read_data(index, simulation):
         with open(f"card_{index}.txt", "r") as file:
             return bytes.fromhex(file.read())
     else:
-        # Implementación para leer de tarjetas RFID
-        pass
+        reader = SimpleMFRC522()
+        try:
+            print(f"Acercar tarjeta {index + 1} al lector...")
+            id, data = reader.read()
+            time.sleep(2)
+            return data.strip()
+        finally:
+            GPIO.cleanup()
+
 
 def main():
     while True:

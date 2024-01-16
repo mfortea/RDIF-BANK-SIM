@@ -46,16 +46,17 @@ def write_data(data, index, simulation):
     if simulation:
         with open(f"card_{index}.txt", "w") as file:
             if isinstance(data, bytes):
-                file.write(data.hex())  # Si es bytes, convertir a hexadecimal
+                file.write(data.hex())
             else:
-                file.write(data)  # Si ya es una cadena, escribir directamente
+                file.write(data)
     else:
-        # Escribir datos en una tarjeta real
         reader = SimpleMFRC522()
         try:
+            print(f"Acercar tarjeta {index + 1} al lector...")
             reader.write(data)
+            print(f"Datos escritos en la tarjeta {index + 1}.")
+            time.sleep(2)
         finally:
-            # Limpiar los pines GPIO
             GPIO.cleanup()
 
 def main():
