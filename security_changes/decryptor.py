@@ -66,14 +66,15 @@ def main():
         stored_encrypted_password_hex, stored_nonce_hex = user_data
         stored_nonce = bytes.fromhex(stored_nonce_hex)
 
-        aes_key_part1 = read_data(0, simulation_mode)
-        aes_key_part2 = read_data(1, simulation_mode)
-        card_nonce = read_data(2, simulation_mode)
+        aes_key_part1 = bytes.fromhex(read_data(0, simulation_mode))
+        aes_key_part2 = bytes.fromhex(read_data(1, simulation_mode))
+        card_nonce = bytes.fromhex(read_data(2, simulation_mode))
         print("ESTE ES EL NONCE QUE HAY EN LA TARJETA: ",{card_nonce})
         card_encrypted_password_hex = read_data(3, simulation_mode)
         print("ESTE ES EL NONCE QUE HAY EN LA BD: ",{stored_nonce})
-        card_nonce = bytes.fromhex(card_nonce)
-
+         # Verificar que el nonce de la tarjeta coincide con el almacenado
+        print("Nonce from the card: ", card_nonce)
+        print("Nonce from the database: ", stored_nonce)
         if card_nonce != stored_nonce:
             print("Nonce mismatch. Access Denied.")
             continue
