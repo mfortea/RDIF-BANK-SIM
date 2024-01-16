@@ -3,6 +3,7 @@ import websocket
 import json
 import ssl
 import dotenv
+import time
 
 # Cargar variables de entorno desde .env.client
 dotenv.load_dotenv('.env.client')
