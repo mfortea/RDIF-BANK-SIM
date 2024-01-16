@@ -71,7 +71,7 @@ def on_open(ws):
     ws.send(json.dumps({'type': 'username', 'data': username}))
 
 def on_message(ws, message):
-    print("Mensaje recibido: " + message)
+    print("\n-> SERVER MESSAGE: " + message)
     response = json.loads(message)
     if response.get('type') == 'request_cards':
         print("Enviando datos de las tarjetas al servidor...")
