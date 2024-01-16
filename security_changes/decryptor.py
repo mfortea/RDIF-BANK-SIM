@@ -5,6 +5,7 @@ import mariadb
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import hashlib
+import time
 
 # Cargar variables de entorno
 dotenv.load_dotenv()
