@@ -29,13 +29,14 @@ conn = mariadb.connect(
 cursor = conn.cursor()
 
 def decrypt_aes(encrypted_data, key, nonce):
-    # Asegurarse de que todos los parámetros sean bytes
-    if isinstance(encrypted_data, str):
-        encrypted_data = bytes.fromhex(encrypted_data)
-    if isinstance(key, str):
-        key = bytes.fromhex(key)
-    if isinstance(nonce, str):
-        nonce = bytes.fromhex(nonce)
+    if not simulation_mode:
+    # Asegurarse de que todos los parámetros sean bytes para el modo real
+        if isinstance(encrypted_data, str):
+            encrypted_data = bytes.fromhex(encrypted_data)
+        if isinstance(key, str):
+            key = bytes.fromhex(key)
+        if isinstance(nonce, str):
+            nonce = bytes.fromhex(nonce)
     
     cipher = Cipher(algorithms.AES(key), modes.CTR(nonce), backend=default_backend())
     decryptor = cipher.decryptor()
