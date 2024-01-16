@@ -132,6 +132,7 @@ async def handler(websocket, path):
 
         # Autenticar al usuario
         is_valid, response = await authenticate_user(card_data)
+        print("\nUser " + username + " is now log in")
 
         # Enviar respuesta al cliente
         await websocket.send(json.dumps({'type': 'auth_result', 'data': response}))
