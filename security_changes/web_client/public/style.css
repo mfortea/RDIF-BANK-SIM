@@ -1,0 +1,58 @@
+body {
+    background-color: black;
+    color: rgb(223, 223, 223);
+    font-family: "Lucida Console", monospace;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.fuel-prices {
+    text-align: center;
+    border: 1px solid rgb(129, 129, 129);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.price-item {
+    background-color: #1f1f1f;
+    border-radius: 8px;
+    margin: 10px 0;
+    padding: 20px;
+}
+
+.price-item h2 {
+    font-size: 50px;
+    margin: 0 0 10px 0;
+}
+
+.price-item p {
+    font-size: 160px;
+    margin: 0;
+    color: #4CAF50; /* Color verde claro, típico de los dígitos LED */
+    text-shadow: 0 0 10px #4CAF50;
+    animation: neonGlow 2s ease-in-out infinite;
+    transition: color 0.5s ease-out;
+}
+
+.updated {
+    color: #ffffff !important; 
+    text-shadow: 0 0 5px #ffffff, 0 0 20px !important;
+}
+
+@keyframes flashAnimation {
+    from { color: white; }
+    to { color: transparent; }
+}
+
+/* Animación de neón suave */
+@keyframes neonGlow {
+    0%, 100% {
+        text-shadow: 0 0 0px #4CAF50, 0 0 10px #4CAF50;
+    }
+    50% {
+        text-shadow: 0 0 5px #4CAF50, 0 0 20px #4CAF50;
+    }
+}

@@ -27,7 +27,7 @@ def clear_screen():
 
 # Llamar a clear_screen al inicio
 clear_screen()
-print("** CLIENT **.\n")
+print("CLIENT RUNNING...\n")
 
 def on_error(ws, error):
     print(error)
@@ -43,8 +43,8 @@ def read_data_from_cards(simulation):
         card_data = []
         for i in range(4):
             with open(f"card_{i}.txt", "r") as file:
-                card_data.append(file.read())
-                return card_data
+                card_data.append(file.read().strip())
+        return card_data  
     else:
         # Leer datos de las tarjetas RFID reales
         from mfrc522 import SimpleMFRC522
@@ -64,7 +64,7 @@ def read_data_from_cards(simulation):
             GPIO.cleanup()
 
 def send_card_data_to_server(ws, card_data, username):
-    # Empaquetar los datos en un objeto JSON y enviarlos al servidor
+        # Empaquetar los datos en un objeto JSON y enviarlos al servidor
         message = json.dumps({
         'username': username,
         'aes_key': card_data[0] + card_data[1],
@@ -91,7 +91,7 @@ def on_message(ws, message):
 
 
 if __name__ == "__main__":
-    #websocket.enableTrace(True)
+    websocket.enableTrace(False)
     ws = websocket.WebSocketApp(f"wss://{SERVER_IP}:{SERVER_PORT}",
                                 on_message=on_message,
                                 on_error=on_error,
