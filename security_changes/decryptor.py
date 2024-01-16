@@ -91,7 +91,11 @@ def main():
             continue
 
         aes_key = aes_key_part1 + aes_key_part2
-        card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
+
+        if not simulation_mode:
+            card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
+        else:
+            card_encrypted_password = (card_encrypted_password_hex)
 
         # Desencriptar contraseña
         decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, card_nonce)
