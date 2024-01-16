@@ -6,6 +6,16 @@ import json
 import ssl
 import dotenv
 import time
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    print('\nClosing WebSocket connection...')
+    ws.close()
+    print('Connection closed. Exiting...')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 # Cargar variables de entorno desde .env.client
 dotenv.load_dotenv('.env.client')
@@ -80,12 +90,31 @@ def on_open(ws):
     print("Sending username ...")
     ws.send(json.dumps({'type': 'username', 'data': username}))
 
+
 def on_message(ws, message):
+    global username
     response = json.loads(message)
-    if response.get('type') == 'request_cards':
+    response_type = response.get('type')
+
+    if response_type == 'error':
+        print(response.get('data'))
+        if "exceeded" in response.get('data').lower():
+            print("Closing connection...")
+            ws.close()
+        elif "format" in response.get('data').lower():
+            user_input = input("Enter the value: ")
+            ws.send(json.dumps({'type': 'input_response', 'data': user_input}))
+        else:
+            print("Unhandled error. Closing connection...")
+            ws.close()
+    elif response_type == 'request_cards':
         print("Sending card data ...")
         card_data = read_data_from_cards(simulation_mode)
         send_card_data_to_server(ws, card_data, username)
+    elif response_type == 'menu' or response_type == 'input':
+        print(response.get('data'))
+        user_input = input("Your choice: " if response_type == 'menu' else "Enter the value: ")
+        ws.send(json.dumps({'type': 'choice' if response_type == 'menu' else 'input_response', 'data': user_input}))
     else:
         print(response.get('data'))
 
@@ -97,6 +126,8 @@ if __name__ == "__main__":
                                 on_error=on_error,
                                 on_close=on_close)
     ws.on_open = on_open
-    
-    # Configuración para SSL (actualizar con los certificados adecuados)
-    ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
+
+    # Configuración para SSL y ping/pong
+    ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE}, 
+                   ping_interval=290,
+                   ping_timeout=10)   

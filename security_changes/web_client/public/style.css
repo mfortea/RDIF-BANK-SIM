@@ -34,7 +34,7 @@ body {
     color: #4CAF50; /* Color verde claro, típico de los dígitos LED */
     text-shadow: 0 0 10px #4CAF50;
     animation: neonGlow 2s ease-in-out infinite;
-    transition: color 0.5s ease-out;
+    transition: color 0.5s cubic-bezier();
 }
 
 .updated {
