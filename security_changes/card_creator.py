@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import random
 import hashlib
+import time
 
 # Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
