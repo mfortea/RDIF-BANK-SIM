@@ -45,7 +45,7 @@ def read_data_from_cards(simulation):
         try:
             card_data = []
             for i in range(4):
-                print(f"Approach card {i + 1} to the RFID reader...")
+                print(f"\nApproach card {i + 1} to the RFID reader...")
                 id, data = reader.read()
                 card_data.append(data.strip())
                 print(f"Card {i + 1} read <<< Remove the card")
