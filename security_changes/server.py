@@ -12,7 +12,7 @@ from cryptography.hazmat.backends import default_backend
 import hashlib
 
 # Cargar variables de entorno
-dotenv.load_dotenv('.env_server')
+dotenv.load_dotenv('.env.server')
 
 # Configuración de la base de datos y otras variables de entorno
 db_config = {
