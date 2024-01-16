@@ -29,8 +29,14 @@ conn = mariadb.connect(
 cursor = conn.cursor()
 
 def decrypt_aes(encrypted_data, key, nonce):
+    # Asegurarse de que todos los parámetros sean bytes
     if isinstance(encrypted_data, str):
-        encrypted_data = bytes.fromhex(encrypted_data)  # Convertir de hex a bytes si es necesario
+        encrypted_data = bytes.fromhex(encrypted_data)
+    if isinstance(key, str):
+        key = bytes.fromhex(key)
+    if isinstance(nonce, str):
+        nonce = bytes.fromhex(nonce)
+    
     cipher = Cipher(algorithms.AES(key), modes.CTR(nonce), backend=default_backend())
     decryptor = cipher.decryptor()
     return decryptor.update(encrypted_data) + decryptor.finalize()
@@ -46,7 +52,7 @@ def read_data(index, simulation):
             print(f"Approach card {index + 1} to the RFID reader...")
             data = reader.read()
             card_data = data[1]
-            print(f"Data from card {index + 1} read.")
+            print(f"Data from card {index + 1} read >>> Remove the card from the reader")
             time.sleep(2)
             return card_data.strip()
         finally:
@@ -69,9 +75,7 @@ def main():
         aes_key_part1 = bytes.fromhex(read_data(0, simulation_mode))
         aes_key_part2 = bytes.fromhex(read_data(1, simulation_mode))
         card_nonce = bytes.fromhex(read_data(2, simulation_mode))
-        print("ESTE ES EL NONCE QUE HAY EN LA TARJETA: ",{card_nonce})
         card_encrypted_password_hex = read_data(3, simulation_mode)
-        print("ESTE ES EL NONCE QUE HAY EN LA BD: ",{stored_nonce})
          # Verificar que el nonce de la tarjeta coincide con el almacenado
         print("Nonce from the card: ", card_nonce)
         print("Nonce from the database: ", stored_nonce)
@@ -83,7 +87,7 @@ def main():
         card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
 
         # Desencriptar contraseña
-        decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
+        decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, card_nonce)
         
         # Comparar hashes de contraseñas
         decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
