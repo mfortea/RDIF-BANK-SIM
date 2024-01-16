@@ -53,9 +53,9 @@ def write_data(data, index, simulation):
     else:
         reader = SimpleMFRC522()
         try:
-            print(f"Acercar tarjeta {index + 1} al lector...")
+            print(f"Approach card number {index + 1} to the RFID reader...")
             reader.write(data)
-            print(f"Datos escritos en la tarjeta {index + 1}.")
+            print(f"Data writed to card number {index + 1}.")
             time.sleep(2)
         finally:
             GPIO.cleanup()

@@ -42,10 +42,11 @@ def read_data(index, simulation):
     else:
         reader = SimpleMFRC522()
         try:
-            print(f"Acercar tarjeta {index + 1} al lector...")
-            id, data = reader.read()
+            print(f"Approach card {index + 1} to the RFID reader...")
+            data = reader.read()
+            card_data = data[1]
             time.sleep(2)
-            return data.strip()
+            return card_data.strip()
         finally:
             GPIO.cleanup()
 
@@ -86,7 +87,7 @@ def main():
         is_valid = decrypted_password_hash == stored_encrypted_password_hex
 
         # Acceso al sistema
-        print("Access Granted" if is_valid else "Access Denied")
+        print("Access Granted!" if is_valid else "Access Denied")
         break
 
     # Cerrar la conexión a la base de datos
