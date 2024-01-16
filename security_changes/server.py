@@ -2,15 +2,12 @@ import os
 import dotenv
 import mariadb
 import ssl
-from websocket_server import WebsocketServer
+import asyncio
+import websockets
 import json
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import hashlib
-
-context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-
 
 # Cargar variables de entorno
 dotenv.load_dotenv('.env_server')
@@ -22,6 +19,11 @@ db_config = {
     'host': os.getenv("DB_HOST"),
     'database': os.getenv("DB_NAME")
 }
+
+# Configuración SSL
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+
 # Funciones para manejar eventos de WebSocket
 def new_client(client, server):
     print("Nuevo cliente conectado y fue dado id %d" % client['id'])
@@ -33,6 +35,7 @@ def client_left(client, server):
 def message_received(client, server, message):
     # Aquí se manejarán los mensajes recibidos
     pass
+
 # Función para desencriptar los datos
 def decrypt_aes(encrypted_data, key, nonce):
     if isinstance(encrypted_data, str):
@@ -46,7 +49,7 @@ def decrypt_aes(encrypted_data, key, nonce):
     decryptor = cipher.decryptor()
     return decryptor.update(encrypted_data) + decryptor.finalize()
 
-def authenticate_user(data):
+async def authenticate_user(data):
     try:
         # Conectar a la base de datos
         conn = mariadb.connect(**db_config)
@@ -81,21 +84,22 @@ def authenticate_user(data):
     finally:
         conn.close()
 
-def message_received(client, server, message):
-    # Decodificar el mensaje JSON
-    data = json.loads(message)
-    
-    # Autenticar al usuario
-    is_valid, response = authenticate_user(data)
+async def handler(websocket, path):
+    try:
+        # Esperar a recibir mensaje del cliente
+        message = await websocket.recv()
+        data = json.loads(message)
 
-    # Enviar respuesta al cliente
-    server.send_message(client, response)
+        # Autenticar al usuario
+        is_valid, response = await authenticate_user(data)
+
+        # Enviar respuesta al cliente
+        await websocket.send(response)
+    except websockets.exceptions.ConnectionClosedError:
+        print("Conexión cerrada inesperadamente.")
+
 
 # Crear un servidor WebSocket
-server = WebsocketServer(host='0.0.0.0', port=8001, ssl_context=context)  # Actualizar con SSL
-server.set_fn_new_client(new_client)
-server.set_fn_client_left(client_left)
-server.set_fn_message_received(message_received)
-
-# Iniciar el servidor
-server.run_forever()
+start_server = websockets.serve(handler, '0.0.0.0', 8001, ssl=context)
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
