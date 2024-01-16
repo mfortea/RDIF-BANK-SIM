@@ -17,12 +17,25 @@ SERVER_PORT = os.getenv("SERVER_PORT")
 simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
 username = None
 
+def clear_screen():
+    # Comando para Windows
+    if os.name == 'nt':
+        os.system('cls')
+    # Comando para Unix/Linux/Mac
+    else:
+        os.system('clear')
+
+# Llamar a clear_screen al inicio
+clear_screen()
+print("** CLIENT **.\n")
+
 def on_error(ws, error):
     print(error)
 
-def on_close(ws):
-    print("### Conexión cerrada ###")
-
+def on_close(ws, close_status_code, close_msg):
+    print("### Connection closed ###")
+    if close_status_code or close_msg:
+        print("### Connection closed ###")
 
 def read_data_from_cards(simulation):
     if simulation:

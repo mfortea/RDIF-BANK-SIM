@@ -26,6 +26,17 @@ db_config = {
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
 
+def clear_screen():
+    # Comando para Windows
+    if os.name == 'nt':
+        os.system('cls')
+    # Comando para Unix/Linux/Mac
+    else:
+        os.system('clear')
+
+clear_screen()
+print("SERVER RUNNING...\n")
+
 # Funciones para manejar eventos de WebSocket
 def new_client(client, server):
     print("Nuevo cliente conectado y fue dado id %d" % client['id'])
@@ -90,7 +101,7 @@ async def authenticate_user(data):
         decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
         is_valid = decrypted_password_hash == stored_encrypted_password_hex
 
-        return is_valid, "Access Granted! Welcome" if is_valid else "Access Denied"
+        return is_valid, "\nAccess Granted! Welcome" if is_valid else "Access Denied"
 
     finally:
         conn.close()
@@ -115,7 +126,7 @@ async def handler(websocket, path):
             await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Please, send card data'}))
 
         # Esperar los datos de las tarjetas
-        print("Esperando datos de las tarjetas...")
+        print("Waiting card data...")
         card_data_message = await websocket.recv()
         card_data = json.loads(card_data_message)
 
