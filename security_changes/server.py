@@ -76,12 +76,12 @@ async def authenticate_user(data):
         if not user_data:
             return False, "Username doesn't exist."
 
-        print("Nonce desde la base de datos:", stored_nonce)
-        print("Nonce enviado por el cliente:", card_nonce)
-
         # Comparar el nonce y desencriptar la contraseña
         stored_encrypted_password_hex, stored_nonce_hex = user_data
         stored_nonce = bytes.fromhex(stored_nonce_hex) if isinstance(stored_nonce_hex, str) else stored_nonce_hex
+
+        print("Nonce desde la base de datos:", stored_nonce)
+        print("Nonce enviado por el cliente:", card_nonce)
 
         if card_nonce != stored_nonce:
             return False, "Nonce mismatch."
