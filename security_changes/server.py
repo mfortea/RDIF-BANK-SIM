@@ -51,6 +51,7 @@ def decrypt_aes(encrypted_data, key, nonce):
     decryptor = cipher.decryptor()
     return decryptor.update(encrypted_data) + decryptor.finalize()
 
+
 async def authenticate_user(data):
     try:
         # Conectar a la base de datos
@@ -59,11 +60,15 @@ async def authenticate_user(data):
 
         # Descomponer los datos recibidos
         username = data.get('username')
-        aes_key = bytes.fromhex(data.get('aes_key'))
-        card_nonce = bytes.fromhex(data.get('card_nonce'))
+        aes_key_hex = data.get('aes_key')
+        card_nonce_hex = data.get('card_nonce')
         card_encrypted_password_hex = data.get('card_encrypted_password_hex')
 
-        print("EL USUARIO RECIBIDO ES: " + username)
+        # Convertir de hex a bytes si los datos son cadenas
+        aes_key = bytes.fromhex(aes_key_hex) if isinstance(aes_key_hex, str) else aes_key_hex
+        card_nonce = bytes.fromhex(card_nonce_hex) if isinstance(card_nonce_hex, str) else card_nonce_hex
+        card_encrypted_password = bytes.fromhex(card_encrypted_password_hex) if isinstance(card_encrypted_password_hex, str) else card_encrypted_password_hex
+
         # Comprobar si el usuario existe en la base de datos
         cursor.execute("SELECT password, nonce FROM users WHERE username=?", (username,))
         user_data = cursor.fetchone()
@@ -73,12 +78,10 @@ async def authenticate_user(data):
 
         # Comparar el nonce y desencriptar la contraseña
         stored_encrypted_password_hex, stored_nonce_hex = user_data
-        stored_nonce = bytes.fromhex(stored_nonce_hex)
+        stored_nonce = bytes.fromhex(stored_nonce_hex) if isinstance(stored_nonce_hex, str) else stored_nonce_hex
 
-        if bytes.fromhex(card_nonce) != stored_nonce:
+        if card_nonce != stored_nonce:
             return False, "Nonce mismatch."
-
-        card_encrypted_password = bytes.fromhex(card_encrypted_password_hex)
 
         # Desencriptar contraseña
         decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
@@ -91,6 +94,7 @@ async def authenticate_user(data):
 
     finally:
         conn.close()
+
 
 async def handler(websocket, path):
     try:
