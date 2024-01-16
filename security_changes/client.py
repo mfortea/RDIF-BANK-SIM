@@ -15,7 +15,7 @@ SERVER_IP = os.getenv("SERVER_IP")
 SERVER_PORT = os.getenv("SERVER_PORT")
 
 simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
-actual_username = ""
+username = None
 
 def on_error(ws, error):
     print(error)
@@ -64,9 +64,9 @@ def send_card_data_to_server(ws, card_data, username):
         ws.send(message)
 
 def on_open(ws):
+    global username
     print("Conectando al servidor...")
     username = input("Enter username: ")
-    actual_username = username
     print("Enviando nombre de usuario al servidor...")
     ws.send(json.dumps({'type': 'username', 'data': username}))
 
