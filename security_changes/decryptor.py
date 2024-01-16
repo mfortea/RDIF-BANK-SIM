@@ -77,8 +77,8 @@ def main():
             aes_key_part1 = bytes.fromhex(read_data(0, simulation_mode))
             aes_key_part2 = bytes.fromhex(read_data(1, simulation_mode))
         else:
-            aes_key_part1 = str.fromhex(read_data(0, simulation_mode))
-            aes_key_part2 = str.fromhex(read_data(1, simulation_mode))
+            aes_key_part1 = (read_data(0, simulation_mode))
+            aes_key_part2 = (read_data(1, simulation_mode))
         card_nonce = bytes.fromhex(read_data(2, simulation_mode))
         card_encrypted_password_hex = read_data(3, simulation_mode)
          # Verificar que el nonce de la tarjeta coincide con el almacenado
