@@ -68,16 +68,17 @@ def on_open(ws):
     ws.send(json.dumps({'type': 'username', 'data': username}))
 
 def on_message(ws, message):
-    print("\n-> SERVER MESSAGE: " + message)
     response = json.loads(message)
     if response.get('type') == 'request_cards':
         print("Sending card data ...")
         card_data = read_data_from_cards(simulation_mode)
         send_card_data_to_server(ws, card_data, username)
+    else:
+        print(response.get('data'))
 
 
 if __name__ == "__main__":
-    websocket.enableTrace(True)
+    #websocket.enableTrace(True)
     ws = websocket.WebSocketApp(f"wss://{SERVER_IP}:{SERVER_PORT}",
                                 on_message=on_message,
                                 on_error=on_error,

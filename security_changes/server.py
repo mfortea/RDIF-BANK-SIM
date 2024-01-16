@@ -32,7 +32,7 @@ def new_client(client, server):
     server.send_message_to_all("Hey all, a new client has joined us")
 
 def client_left(client, server):
-    print("Cliente(%d) desconectado" % client['id'])
+    print("Client(%d) disconnected" % client['id'])
 
 def message_received(client, server, message):
     # Aquí se manejarán los mensajes recibidos
@@ -80,9 +80,6 @@ async def authenticate_user(data):
         stored_encrypted_password_hex, stored_nonce_hex = user_data
         stored_nonce = bytes.fromhex(stored_nonce_hex) if isinstance(stored_nonce_hex, str) else stored_nonce_hex
 
-        print("Nonce desde la base de datos:", stored_nonce)
-        print("Nonce enviado por el cliente:", card_nonce)
-
         if card_nonce != stored_nonce:
             return False, "Nonce mismatch."
 
@@ -93,7 +90,7 @@ async def authenticate_user(data):
         decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
         is_valid = decrypted_password_hash == stored_encrypted_password_hex
 
-        return is_valid, "Access Granted!" if is_valid else "Access Denied"
+        return is_valid, "Access Granted! Welcome" if is_valid else "Access Denied"
 
     finally:
         conn.close()
@@ -101,7 +98,7 @@ async def authenticate_user(data):
 
 async def handler(websocket, path):
     try:
-        print("Cliente conectado. Esperando nombre de usuario...")
+        print("Client Connected. Waiting for login...")
         # Recibir el nombre de usuario
         username_message = await websocket.recv()
         username_data = json.loads(username_message)
@@ -112,7 +109,7 @@ async def handler(websocket, path):
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(1) FROM users WHERE username=?", (username,))
         if cursor.fetchone()[0] == 0:
-            await websocket.send(json.dumps({'type': 'error', 'data': 'Usuario no existe.'}))
+            await websocket.send(json.dumps({'type': 'error', 'data': 'User does not exist.'}))
             return
         else:
             await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Please, send card data'}))
@@ -128,7 +125,7 @@ async def handler(websocket, path):
         # Enviar respuesta al cliente
         await websocket.send(json.dumps({'type': 'auth_result', 'data': response}))
     except websockets.exceptions.ConnectionClosedError:
-        print("Conexión cerrada inesperadamente.")
+        print("Conection close suddenly.")
 
 
 
