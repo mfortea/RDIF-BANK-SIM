@@ -147,6 +147,7 @@ async def show_menu_and_process_choice(websocket, username):
 
         # Construir y enviar el menú
         menu = f"{prices_info}\n\nPRICES ADMINISTRATOR\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
+        await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
 
         choice_message = await websocket.recv()
         choice = json.loads(choice_message).get('data')
