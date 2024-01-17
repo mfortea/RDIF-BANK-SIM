@@ -120,26 +120,23 @@ async def authenticate_user(data):
 
 
 async def show_menu_and_process_choice(websocket, username):
-    clear_screen()
-    menu = "\nPRICES ADMINISTRATOR \n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
-    await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
+    while True:
+        menu = "\nPRICES ADMINISTRATOR \n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
+        await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
 
-    # Esperar la elección del usuario
-    choice_message = await websocket.recv()
-    choice = json.loads(choice_message).get('data')
+        choice_message = await websocket.recv()
+        choice = json.loads(choice_message).get('data')
 
-    if choice == '1':
-        await change_price(websocket, "gasoline_price")
-    elif choice == '2':
-        await change_price(websocket, "diesel_price")
-    elif choice == '0':
-        await websocket.send(json.dumps({'type': 'info', 'data': 'Exiting...'}))
-        return
-    else:
-        await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid choice.'}))
+        if choice == '1':
+            await change_price(websocket, "gasoline_price")
+        elif choice == '2':
+            await change_price(websocket, "diesel_price")
+        elif choice == '0':
+            await websocket.send(json.dumps({'type': 'info', 'data': 'Exiting...'}))
+            break  # Salir del bucle y finalizar la función
+        else:
+            await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid choice.'}))
 
-    # Mostrar el menú nuevamente
-    await show_menu_and_process_choice(websocket, username)
 
 async def change_price(websocket, price_type):
     fuel_type = ''
@@ -162,6 +159,7 @@ async def change_price(websocket, price_type):
         await websocket.send(json.dumps({'type': 'error', 'data': '\nInvalid price format.'}))
         # Volver a pedir el precio
         await change_price(websocket, price_type)
+
 
 def is_valid_price_format(price_str):
     return re.match(r"^\d{1,2}[.,]\d{1,2}$", price_str)
