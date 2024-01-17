@@ -153,11 +153,14 @@ async def change_price(websocket, price_type):
 
     # Validar y actualizar el precio
     if is_valid_price_format(new_price):
-        # Actualizar el precio en la base de datos
         update_price_in_db(price_type, new_price)
         await websocket.send(json.dumps({'type': 'info', 'data': f'\n-> The new {fuel_type} price is {new_price}.'}))
+        # Volver a mostrar el menú
+        await show_menu_and_process_choice(websocket, username)
     else:
-        await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid price format.'}))
+        await websocket.send(json.dumps({'type': 'error', 'data': '\nInvalid price format.'}))
+        # Volver a pedir el precio
+        await change_price(websocket, price_type)
 
 def is_valid_price_format(price_str):
     return re.match(r"^\d{1,2}[.,]\d{1,2}$", price_str)
