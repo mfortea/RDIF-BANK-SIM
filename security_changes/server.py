@@ -137,6 +137,10 @@ async def show_menu_and_process_choice(websocket, username):
         else:
             await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid choice.'}))
 
+    # Cerrar la conexión después de salir del menú
+    await websocket.close()
+
+
 
 async def change_price(websocket, price_type):
     fuel_type = ''
