@@ -118,11 +118,35 @@ async def authenticate_user(data):
     finally:
         conn.close()
 
+def get_current_prices():
+    try:
+        # Conectar a la base de datos
+        conn = mariadb.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Obtener los precios actuales
+        cursor.execute("SELECT gasoline_price, diesel_price FROM prices WHERE id = 1")
+        prices = cursor.fetchone()
+
+        return {
+            'gasoline_price': prices[0] if prices else 'Unavailable',
+            'diesel_price': prices[1] if prices else 'Unavailable'
+        }
+
+    except mariadb.Error as e:
+        print(f"Error retrieving prices: {e}")
+        return {'gasoline_price': 'Error', 'diesel_price': 'Error'}
+    finally:
+        conn.close()
+
 
 async def show_menu_and_process_choice(websocket, username):
     while True:
-        menu = "\nPRICES ADMINISTRATOR \n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
-        await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
+        current_prices = get_current_prices()
+        prices_info = f"\nCurrent Gasoline Price: {current_prices['gasoline_price']}\nCurrent Diesel Price: {current_prices['diesel_price']}"
+
+        # Construir y enviar el menú
+        menu = f"{prices_info}\n\nPRICES ADMINISTRATOR\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
 
         choice_message = await websocket.recv()
         choice = json.loads(choice_message).get('data')
@@ -139,7 +163,6 @@ async def show_menu_and_process_choice(websocket, username):
 
     # Cerrar la conexión después de salir del menú
     await websocket.close()
-
 
 
 async def change_price(websocket, price_type):
