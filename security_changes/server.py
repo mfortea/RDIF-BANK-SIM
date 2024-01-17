@@ -22,7 +22,7 @@ async def shutdown(signal, loop):
     loop.stop()
 
 # Cargar variables de entorno
-dotenv.load_dotenv('.env.server')
+dotenv.load_dotenv('.env')
 
 # Configuración de la base de datos y otras variables de entorno
 db_config = {
@@ -141,12 +141,12 @@ def get_current_prices():
 
 
 async def show_menu_and_process_choice(websocket, username):
-    while True:
+    while True:         
         current_prices = get_current_prices()
-        prices_info = f"\nCurrent Gasoline Price: {current_prices['gasoline_price']}\nCurrent Diesel Price: {current_prices['diesel_price']}"
+        prices_info = f"\n** PRICES ADMINISTRATION ** \nCurrent Gasoline Price: {current_prices['gasoline_price']}\nCurrent Diesel Price: {current_prices['diesel_price']}"
 
         # Construir y enviar el menú
-        menu = f"{prices_info}\n\nPRICES ADMINISTRATOR\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
+        menu = f"{prices_info}\n\\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
         await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
 
         choice_message = await websocket.recv()
