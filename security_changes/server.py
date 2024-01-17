@@ -73,6 +73,8 @@ def decrypt_aes(encrypted_data, key, nonce):
     return decryptor.update(encrypted_data) + decryptor.finalize()
 
 
+username_gen = ''
+
 async def authenticate_user(data):
     try:
         # Conectar a la base de datos
@@ -155,8 +157,7 @@ async def change_price(websocket, price_type):
     if is_valid_price_format(new_price):
         update_price_in_db(price_type, new_price)
         await websocket.send(json.dumps({'type': 'info', 'data': f'\n-> The new {fuel_type} price is {new_price}.'}))
-        # Volver a mostrar el menú
-        await show_menu_and_process_choice(websocket, username)
+        await show_menu_and_process_choice(websocket, username_gen)
     else:
         await websocket.send(json.dumps({'type': 'error', 'data': '\nInvalid price format.'}))
         # Volver a pedir el precio
@@ -197,6 +198,7 @@ async def handler(websocket, path):
             username_message = await websocket.recv()
             username_data = json.loads(username_message)
             username = username_data.get('data')
+            username_gen = username
 
             # Verificar si el usuario existe en la base de datos
             conn = mariadb.connect(**db_config)
