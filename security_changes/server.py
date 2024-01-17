@@ -145,7 +145,7 @@ async def change_price(websocket, price_type):
         fuel_type = 'gasoline'
     elif price_type == 'diesel_price':
         fuel_type = 'diesel'
-    await websocket.send(json.dumps({'type': 'input', 'data': f"\nEnter new {fuel_type} price (format 00.00):"}))
+    await websocket.send(json.dumps({'type': 'input', 'data': f"\nEnter new {fuel_type} price (format 00,00):"}))
 
     # Esperar el nuevo precio
     new_price_message = await websocket.recv()
@@ -160,7 +160,7 @@ async def change_price(websocket, price_type):
         await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid price format.'}))
 
 def is_valid_price_format(price_str):
-    return re.match(r"^\d{1,2}[.,]\d{2}$", price_str)
+    return re.match(r"^\d{1,2}[.,]\d{1,2}$", price_str)
 
 def update_price_in_db(price_type, new_price):
     try:
