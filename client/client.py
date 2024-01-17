@@ -120,7 +120,7 @@ def on_message(ws, message):
 
 
 if __name__ == "__main__":
-    websocket.enableTrace(False)
+    websocket.enableTrace(True)
     ws = websocket.WebSocketApp(f"wss://{SERVER_IP}:{SERVER_PORT}",
                                 on_message=on_message,
                                 on_error=on_error,
