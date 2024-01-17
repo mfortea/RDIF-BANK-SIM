@@ -1,8 +1,0 @@
- 1232  pip3 install rpi.gpio
- 1233  sudo pip3 install rpi.gpio
- 1235  sudo pip3 install spidev
- 1236  sudo pip3 install mfrc522
- 1460  unzip  ~/Downloads/MFRC522-python-master.zip  
- 1465  cd MFRC522-python-master/
- 1467  cd mfrc522/
- 1472  sudo python setup.py install

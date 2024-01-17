@@ -1,235 +1,283 @@
-## server.py
+# SERVER.PY
 
+import os
+import dotenv
+import mariadb
+import ssl
 import asyncio
 import websockets
 import json
-import os
-import subprocess
-import ssl
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+import hashlib
+import re
 import signal
-from dotenv import load_dotenv
-import base64
-
-def clear_terminal():
-    if os.name == 'nt':
-        subprocess.run('cls', shell=True)
-    else:
-        subprocess.run('clear', shell=True)
-
-def load_users():
-    with open("users.json", "r") as file:
-        return json.load(file)
-
-def save_users(users):
-    with open("users.json", "w") as file:
-        json.dump(users, file, indent=4)
-
-users_file_lock = asyncio.Lock()
-
-async def manage_users(websocket, is_boss):
-    if not is_boss:
-        return
-
-    while True:
-        command = await websocket.recv()
-        async with users_file_lock:
-            users = load_users()
-            if command == "list_users":
-                user_list = []
-                for user in users:
-                    decoded_username = base64.b64decode(user['username']).decode()
-                    user_info = f" * {decoded_username} - {'Is Boss' if user['boss'] else 'Not Boss'} - {'User enabled' if user['enabled'] else 'User disabled'}"
-                    user_list.append(user_info)
-                await websocket.send(json.dumps(user_list))
-
-            elif command.startswith("modify_user"):
-                _, username, status = command.split()
-                encoded_username = base64.b64encode(username.encode()).decode()
-                decoded_username = base64.b64decode(encoded_username).decode()
-                for user in users:
-                    if user['username'] == encoded_username:
-                        user['enabled'] = status == 'enable'
-                        save_users(users)
-                        await websocket.send(f"User {decoded_username} updated.")
-                        break
-                else:
-                    await websocket.send(f"User {username} not found.")
-
-            elif command.startswith("delete_user"):
-                _, username = command.split()
-                encoded_username = base64.b64encode(username.encode()).decode()
-                original_count = len(users)
-                users = [user for user in users if user['username'] != encoded_username]
-                if len(users) < original_count:
-                    save_users(users)
-                    await websocket.send(f"User {username} deleted.")
-                else:
-                    await websocket.send(f"User {username} not found.")
-
-            elif command.startswith("add_user"):
-                _, username, boss_str, enabled_str = command.split()
-                encoded_username = base64.b64encode(username.encode()).decode()
-                is_boss = boss_str == 'yes'
-                is_enabled = enabled_str == 'yes'
-                # Verifica si el usuario ya existe
-                if any(user["username"] == encoded_username for user in users):
-                    await websocket.send("Error: The user already exists")
-                else:
-                    users.append({"username": encoded_username, "enabled": is_enabled, "boss": is_boss})
-                    save_users(users)
-                    await websocket.send(f"User {username} added.")
-            elif command == "exit":
-                break
-
-async def verify_user_card(user_card):
-    user_card = user_card.strip()  # Eliminar espacios en blanco
-    try:
-        with open("users.json", "r") as file:
-            users = json.load(file)
-            for user in users:
-                user_name = user["username"].strip()  # Eliminar espacios en blanco
-                if user_card == user_name:
-                    if not user["enabled"]:
-                        return False, "User disabled", user_card, False
-                    return True, "USER_OK", base64.b64decode(user_card).decode(), user["boss"]
-            return False, "User not authorized", user_card, False
-    except Exception as e:
-        print(f"Error during user card verification: {e}")
-        return False, "User card verification error", user_card, False
+import websockets.exceptions
 
 
-auth_card_content_encrypted = base64.b64encode("SharedAuthData".encode()).decode()  # Reemplazar con tu valor real
-
-async def authenticate_user(auth_card, auth_card_content):
-    try:
-        auth_card_decoded = base64.b64decode(auth_card).decode()
-        auth_card_decoded = auth_card_decoded.strip() 
-        auth_card_content = auth_card_content.strip()
-        if auth_card_decoded != auth_card_content:
-            return False, "Invalid Auth Card"
-        return True, ""
-    except base64.binascii.Error as e:
-        print(f"Base64 decoding error: {e}")
-        return False, "Auth card decoding error"
-    except UnicodeDecodeError as e:
-        print(f"Unicode decoding error: {e}")
-        return False, "Auth card unicode error"
-    except Exception as e:
-        print(f"General error during auth card verification: {e}")
-        return False, "Auth card verification error"
-
-
-async def payment_processor(websocket, path):
-    username = "UNKNOWN USER"
-    connection_active = True  # Flag para controlar la vida de la conexión
-
-    try:
-        while connection_active:
-            try:
-                # Espera por mensajes del cliente pero con un timeout
-                task = asyncio.wait_for(websocket.recv(), timeout=1.0)
-                user_card_data = await task
-                user_card = json.loads(user_card_data)["user_card"]
-                if user_card is None:
-                    print("ERROR: BAD USER DATA RECEIVED")
-                    return
-                user_valid, message, username, is_boss = await verify_user_card(user_card)
-                if not user_valid:
-                    await websocket.send(message)
-                    continue 
-
-                boss_status = 'boss' if is_boss else 'not_boss'
-                await websocket.send(f"USER_OK;{boss_status};{username}")
-
-                auth_card_data = await websocket.recv()
-                auth_card = json.loads(auth_card_data)["auth_card"]
-
-                auth_valid, message = await authenticate_user(auth_card, "SharedAuthData")
-
-                if not auth_valid:
-                    await websocket.send(message)
-                    continue
-
-                await websocket.send("AUTH_OK")
-                print(f"\n-> USER {username} CONNECTED")
-
-                if is_boss:
-                    await manage_users(websocket, is_boss)
-
-            except asyncio.TimeoutError:
-                continue
-            except websockets.exceptions.ConnectionClosed:
-                connection_active = False
-            except KeyError:
-                print("ERROR: BAD AUTH DATA RECEIVED")
-
-    except websockets.exceptions.ConnectionClosedOK:
-        print(f"-> USER {username} DISCONNECTED")
-    except websockets.exceptions.ConnectionClosedError as e:
-        print(f"-> USER {username} DISCONNECTED with error: {e}")
-    finally:
-        if websocket in connected_clients:
-            connected_clients.remove(websocket)
-        print(f"-> USER {username} DISCONNECTED")
-
-
-# Función para manejar el cierre del servidor
-async def shutdown(server, loop):
-    print("\n\nSERVER CLOSED")
-    server.close()
-    await server.wait_closed()
+async def shutdown(signal, loop):
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+    [task.cancel() for task in tasks]
+    await asyncio.gather(*tasks, return_exceptions=True)
     loop.stop()
 
+# Cargar variables de entorno
+dotenv.load_dotenv('.env')
+
+# Configuración de la base de datos y otras variables de entorno
+db_config = {
+    'user': os.getenv("DB_USER"),
+    'password': os.getenv("DB_PASSWORD"),
+    'host': os.getenv("DB_HOST"),
+    'database': os.getenv("DB_NAME")
+}
+
+# Configuración SSL
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
+
+def clear_screen():
+    # Comando para Windows
+    if os.name == 'nt':
+        os.system('cls')
+    # Comando para Unix/Linux/Mac
+    else:
+        os.system('clear')
+
+clear_screen()
+print("SERVER RUNNING...\n")
+
+# Funciones para manejar eventos de WebSocket
+def new_client(client, server):
+    print("Nuevo cliente conectado y fue dado id %d" % client['id'])
+    server.send_message_to_all("Hey all, a new client has joined us")
+
+def client_left(client, server):
+    print("Client(%d) disconnected" % client['id'])
+
+def message_received(client, server, message):
+    # Aquí se manejarán los mensajes recibidos
+    pass
+
+# Función para desencriptar los datos
+def decrypt_aes(encrypted_data, key, nonce):
+    if isinstance(encrypted_data, str):
+        encrypted_data = bytes.fromhex(encrypted_data)
+    if isinstance(key, str):
+        key = bytes.fromhex(key)
+    if isinstance(nonce, str):
+        nonce = bytes.fromhex(nonce)
+
+    cipher = Cipher(algorithms.AES(key), modes.CTR(nonce), backend=default_backend())
+    decryptor = cipher.decryptor()
+    return decryptor.update(encrypted_data) + decryptor.finalize()
+
+
+username_gen = ''
+
+async def authenticate_user(data):
+    try:
+        # Conectar a la base de datos
+        conn = mariadb.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Descomponer los datos recibidos
+        username = data.get('username')
+        aes_key_hex = data.get('aes_key')
+        card_nonce_hex = data.get('card_nonce')
+        card_encrypted_password_hex = data.get('card_encrypted_password_hex')
+
+        # Convertir de hex a bytes si los datos son cadenas
+        aes_key = bytes.fromhex(aes_key_hex) if isinstance(aes_key_hex, str) else aes_key_hex
+        card_nonce = bytes.fromhex(card_nonce_hex) if isinstance(card_nonce_hex, str) else card_nonce_hex
+        card_encrypted_password = bytes.fromhex(card_encrypted_password_hex) if isinstance(card_encrypted_password_hex, str) else card_encrypted_password_hex
+
+        # Comprobar si el usuario existe en la base de datos
+        cursor.execute("SELECT password, nonce FROM users WHERE username=?", (username,))
+        user_data = cursor.fetchone()
+
+        if not user_data:
+            return False, "Username doesn't exist."
+
+        # Comparar el nonce y desencriptar la contraseña
+        stored_encrypted_password_hex, stored_nonce_hex = user_data
+        stored_nonce = bytes.fromhex(stored_nonce_hex) if isinstance(stored_nonce_hex, str) else stored_nonce_hex
+
+        if card_nonce != stored_nonce:
+            return False, "Nonce mismatch."
+
+        # Desencriptar contraseña
+        decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
+
+        # Comparar hashes de contraseñas
+        decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
+        is_valid = decrypted_password_hash == stored_encrypted_password_hex
+
+        return is_valid, "\nAccess Granted! Welcome" if is_valid else "Access Denied"
+
+    finally:
+        conn.close()
+
+def get_current_prices():
+    try:
+        # Conectar a la base de datos
+        conn = mariadb.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Obtener los precios actuales
+        cursor.execute("SELECT gasoline_price, diesel_price FROM prices WHERE id = 1")
+        prices = cursor.fetchone()
+
+        return {
+            'gasoline_price': prices[0] if prices else 'Unavailable',
+            'diesel_price': prices[1] if prices else 'Unavailable'
+        }
+
+    except mariadb.Error as e:
+        print(f"Error retrieving prices: {e}")
+        return {'gasoline_price': 'Error', 'diesel_price': 'Error'}
+    finally:
+        conn.close()
+
+
+async def show_menu_and_process_choice(websocket, username):
+    while True:         
+        current_prices = get_current_prices()
+        prices_info = f"\n** PRICES ADMINISTRATION ** \nCurrent Gasoline Price: {current_prices['gasoline_price']}\nCurrent Diesel Price: {current_prices['diesel_price']}"
+
+        # Construir y enviar el menú
+        menu = f"{prices_info}\n\\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
+        await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
+
+        choice_message = await websocket.recv()
+        choice = json.loads(choice_message).get('data')
+
+        if choice == '1':
+            await change_price(websocket, "gasoline_price")
+        elif choice == '2':
+            await change_price(websocket, "diesel_price")
+        elif choice == '0':
+            await websocket.send(json.dumps({'type': 'info', 'data': 'Exiting...'}))
+            break  # Salir del bucle y finalizar la función
+        else:
+            await websocket.send(json.dumps({'type': 'error', 'data': 'Invalid choice.'}))
+
+    # Cerrar la conexión después de salir del menú
+    await websocket.close()
+
+
+async def change_price(websocket, price_type):
+    fuel_type = ''
+    if price_type == 'gasoline_price':
+        fuel_type = 'gasoline'
+    elif price_type == 'diesel_price':
+        fuel_type = 'diesel'
+    await websocket.send(json.dumps({'type': 'input', 'data': f"\nEnter new {fuel_type} price (format 00,00):"}))
+
+    # Esperar el nuevo precio
+    new_price_message = await websocket.recv()
+    new_price = json.loads(new_price_message).get('data')
+
+    # Validar y actualizar el precio
+    if is_valid_price_format(new_price):
+        update_price_in_db(price_type, new_price)
+        await websocket.send(json.dumps({'type': 'info', 'data': f'\n-> The new {fuel_type} price is {new_price}.'}))
+        await show_menu_and_process_choice(websocket, username_gen)
+    else:
+        await websocket.send(json.dumps({'type': 'error', 'data': '\nInvalid price format.'}))
+        # Volver a pedir el precio
+        await change_price(websocket, price_type)
+
+
+def is_valid_price_format(price_str):
+    return re.match(r"^\d{1,2}[.,]\d{1,2}$", price_str)
+
+def update_price_in_db(price_type, new_price):
+    try:
+        # Conectar a la base de datos
+        conn = mariadb.connect(**db_config)
+        cursor = conn.cursor()
+
+        # Reemplazar comas por puntos y convertir a decimal
+        formatted_price = float(new_price.replace(',', '.'))
+        
+        # Asegurarse de que el precio cumple con el formato decimal(5,2)
+        if formatted_price >= 0 and formatted_price < 1000:
+            cursor.execute(f"UPDATE prices SET {price_type} = %s WHERE id = 1", (formatted_price,))
+            conn.commit()
+        else:
+            print(f"Error: The price {formatted_price} has an invalid format.")
+            return
+
+    except mariadb.Error as e:
+        print(f"Error updating {price_type}: {e}")
+    finally:
+        conn.close()
+
+
+async def handler(websocket, path):
+    try:
+        attempts = 0
+        while attempts < 3:
+            print("Client Connected. Waiting for login...")
+            # Recibir el nombre de usuario
+            username_message = await websocket.recv()
+            username_data = json.loads(username_message)
+            username = username_data.get('data')
+            username_gen = username
+
+            # Verificar si el usuario existe en la base de datos
+            conn = mariadb.connect(**db_config)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(1) FROM users WHERE username=?", (username,))
+            if cursor.fetchone()[0] == 0:
+                await websocket.send(json.dumps({'type': 'error', 'data': 'User does not exist. Try again.'}))
+                attempts += 1
+            else:
+                await websocket.send(json.dumps({'type': 'request_cards', 'data': 'Please, send card data'}))
+
+                # Esperar los datos de las tarjetas
+                print("Waiting for card data...")
+                card_data_message = await websocket.recv()
+                card_data = json.loads(card_data_message)
+
+                # Autenticar al usuario
+                is_valid, response = await authenticate_user(card_data)
+                print(f"\nUser {username} is now logged in")
+
+                # Enviar respuesta al cliente
+                await websocket.send(json.dumps({'type': 'auth_result', 'data': response}))
+                if is_valid:
+                    await show_menu_and_process_choice(websocket, username)
+                break
+
+        if attempts >= 2:
+            await websocket.send(json.dumps({'type': 'error', 'data': 'Maximum login attempts exceeded.'}))
+
+    except websockets.exceptions.ConnectionClosedError:
+        print("Connection closed unexpectedly.")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+
 if __name__ == "__main__":
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    parent_directory = os.path.dirname(current_directory)
-    grandparent_directory = os.path.dirname(parent_directory)
-    env_file_path = os.path.join(grandparent_directory, '.env')
-    load_dotenv(env_file_path)
-
-    PORT = os.getenv("WEBSOCKET_PORT")
-    SERVER_MODE = os.getenv("SERVER_MODE")
-    CERT = os.getenv("CERT_PATH")
-    KEY = os.getenv("KEY_PATH")
-
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(CERT, KEY)
-
-    connected_clients = set()
-
     loop = asyncio.get_event_loop()
+    # Registrar el manejador de señales para SIGINT (Control+C)
+    loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(shutdown(signal.SIGINT, loop)))
 
-    def signal_handler():
-        asyncio.ensure_future(shutdown(server, loop))
-
-    loop.add_signal_handler(signal.SIGINT, signal_handler)
+    # Iniciar el servidor WebSocket con ping/pong y timeout
+    start_server = websockets.serve(
+        handler,
+        '0.0.0.0',
+        8001,
+        ssl=context,
+        ping_interval=290,  
+        ping_timeout=10    
+    )
+    loop.run_until_complete(start_server)
 
     try:
-        start_server = websockets.serve(
-            payment_processor, 
-            SERVER_MODE, 
-            PORT,
-            ssl=ssl_context,
-            ping_interval=300,
-            ping_timeout=300,
-            close_timeout=300
-        )
-        clear_terminal()
-        print("* SERVER RUNNING...")
-        server = loop.run_until_complete(start_server)
-
         loop.run_forever()
-    except OSError as e:
-        if e.errno == 48:  # Número de error para 'address already in use'
-            print("PORT ALREADY IN USE")
-        else:
-            print(f"OSError: {e}")
     finally:
-        loop.close()    
+        loop.close()
+        print("\n**SERVER CLOSED**")

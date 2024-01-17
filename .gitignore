@@ -121,6 +121,10 @@ celerybeat.pid
 
 # Environments
 .env
+.envclient
+.env.server
+.env_client
+.env_server
 .venv
 env/
 venv/
@@ -185,3 +189,5 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+node_modules/
