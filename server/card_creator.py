@@ -8,10 +8,46 @@ from cryptography.hazmat.backends import default_backend
 import random
 import hashlib
 import time
+from cryptography.fernet import Fernet
+import base64
+import getpass
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+
 
 # Cargar variables de entorno desde el archivo .env
 dotenv.load_dotenv()
 simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
+
+master_key = None
+
+def decrypt_key(encrypted_key, password):
+    f = Fernet(password)
+    return f.decrypt(encrypted_key)
+
+def derive_fernet_key(password: bytes, salt: bytes):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password))
+
+def derive_diversified_key(master_key, user_id):
+    combined = master_key + user_id.encode()
+    return hashlib.sha256(combined).digest()
+
+def read_master_key():
+    with open("master_key_encrypted", "rb") as key_file:
+        salt, encrypted_key = key_file.read().split(b' ')
+    password = getpass.getpass("Input password for Master Key: ").encode()
+    password_key = derive_fernet_key(password, salt)
+    
+    f = Fernet(password_key)
+    return f.decrypt(encrypted_key)
 
 # Solo importar bibliotecas RFID si no estamos en modo de simulación
 if not simulation_mode:
@@ -65,6 +101,9 @@ def main():
     enable_encryption = os.getenv("ENABLE_ENCRYPTION", "True").lower() == "true"
     simulation_mode = os.getenv("SIMULATION", "False").lower() == "true"
 
+    # Leer la clave maestra existente
+    master_key = read_master_key()
+
     # Obtener nombre de usuario y contraseña
     username = input("Enter username: ")
     password = input("Enter password: ")
@@ -74,21 +113,23 @@ def main():
         print("Password is too long. Maximum 16 characters.")
         return
 
+    nonce = random.randbytes(16)  # Generar un nonce
+
     if enable_encryption:
-        encrypted_password = encrypt_aes(password, aes_key, nonce)
+        diversified_key = derive_diversified_key(master_key, username)
+        encrypted_password = encrypt_aes(password, diversified_key, nonce)
     else:
-        encrypted_password = password.encode()  # Asegúrate de que sea bytes
+        encrypted_password = password.encode()
 
-
-    # Guardar usuario en la base de datos con el nonce
     password_hash = hashlib.sha256(password.encode()).hexdigest()
-    cursor.execute("INSERT INTO users (username, password, nonce) VALUES (?, ?, ?)", 
-                   (username, password_hash, nonce.hex()))
 
+    # Guardar usuario en la base de datos con el nonce y la clave diversificada
+    cursor.execute("INSERT INTO users (username, password, nonce, diversified_key) VALUES (?, ?, ?, ?)", 
+                   (username, password_hash, nonce.hex(), diversified_key.hex()))
     conn.commit()
 
     # Dividir la información y escribir en las tarjetas
-    data_parts = [aes_key.hex(), nonce.hex(), encrypted_password.hex()]  # Convertir a hexadecimal
+    data_parts = [diversified_key.hex(), nonce.hex(), encrypted_password.hex()]  # Convertir a hexadecimal
     max_chunk_size = 48  # Tamaño máximo de las tarjetas RFID
     card_data = []
 
@@ -105,14 +146,13 @@ def main():
     # Escribir en las tarjetas RFID o en archivos de simulación
     for i, chunk in enumerate(card_data):
         write_data(chunk, i, simulation_mode)
+
     # Cerrar la conexión a la base de datos
     conn.close()
-
 
 def cleanup_GPIO():
     if not simulation_mode:
         GPIO.cleanup()
-
 
 # Llamar a la función principal
 if __name__ == "__main__":

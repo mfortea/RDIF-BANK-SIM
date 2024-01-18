@@ -13,6 +13,14 @@ import hashlib
 import re
 import signal
 import websockets.exceptions
+from cryptography.fernet import Fernet
+import getpass
+from cryptography.fernet import Fernet
+import base64
+import getpass
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
 
 
 async def shutdown(signal, loop):
@@ -47,6 +55,7 @@ def clear_screen():
 clear_screen()
 print("SERVER RUNNING...\n")
 
+
 # Funciones para manejar eventos de WebSocket
 def new_client(client, server):
     print("Nuevo cliente conectado y fue dado id %d" % client['id'])
@@ -58,6 +67,33 @@ def client_left(client, server):
 def message_received(client, server, message):
     # Aquí se manejarán los mensajes recibidos
     pass
+
+def decrypt_key(encrypted_key, password):
+    f = Fernet(password)
+    return f.decrypt(encrypted_key)
+
+def derive_fernet_key(password: bytes, salt: bytes):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password))
+
+def derive_diversified_key(master_key, user_id):
+    combined = master_key + user_id.encode()
+    return hashlib.sha256(combined).digest()
+
+def read_master_key():
+    with open("master_key_encrypted", "rb") as key_file:
+        salt, encrypted_key = key_file.read().split(b' ')
+    password = getpass.getpass("Input password for Master Key: ").encode()
+    password_key = derive_fernet_key(password, salt)
+    
+    f = Fernet(password_key)
+    return f.decrypt(encrypted_key)
 
 # Función para desencriptar los datos
 def decrypt_aes(encrypted_data, key, nonce):
@@ -72,17 +108,23 @@ def decrypt_aes(encrypted_data, key, nonce):
     decryptor = cipher.decryptor()
     return decryptor.update(encrypted_data) + decryptor.finalize()
 
+def derive_diversified_key(master_key, user_id):
+    combined = master_key + user_id.encode()
+    return hashlib.sha256(combined).digest()
 
-username_gen = ''
 
-async def authenticate_user(data):
+
+async def authenticate_user(data, master_key):
+    conn = None
     try:
+        username = data.get('username')
+        diversified_key = derive_diversified_key(master_key, username)
         # Conectar a la base de datos
         conn = mariadb.connect(**db_config)
         cursor = conn.cursor()
 
         # Descomponer los datos recibidos
-        username = data.get('username')
+       
         aes_key_hex = data.get('aes_key')
         card_nonce_hex = data.get('card_nonce')
         card_encrypted_password_hex = data.get('card_encrypted_password_hex')
@@ -107,7 +149,7 @@ async def authenticate_user(data):
             return False, "Nonce mismatch."
 
         # Desencriptar contraseña
-        decrypted_password_bytes = decrypt_aes(card_encrypted_password, aes_key, stored_nonce)
+        decrypted_password_bytes = decrypt_aes(card_encrypted_password, diversified_key, card_nonce)
 
         # Comparar hashes de contraseñas
         decrypted_password_hash = hashlib.sha256(decrypted_password_bytes).hexdigest()
@@ -116,7 +158,8 @@ async def authenticate_user(data):
         return is_valid, "\nAccess Granted! Welcome" if is_valid else "Access Denied"
 
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 def get_current_prices():
     try:
@@ -146,7 +189,7 @@ async def show_menu_and_process_choice(websocket, username):
         prices_info = f"\n** PRICES ADMINISTRATION ** \nCurrent Gasoline Price: {current_prices['gasoline_price']}\nCurrent Diesel Price: {current_prices['diesel_price']}"
 
         # Construir y enviar el menú
-        menu = f"{prices_info}\nn1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
+        menu = f"{prices_info}\n\n1) Change Gasoline Price\n2) Change Diesel Price\n0) Exit"
         await websocket.send(json.dumps({'type': 'menu', 'data': menu}))
 
         choice_message = await websocket.recv()
@@ -216,6 +259,7 @@ def update_price_in_db(price_type, new_price):
 
 
 async def handler(websocket, path):
+    global username_gen  
     try:
         attempts = 0
         while attempts < 3:
@@ -242,9 +286,8 @@ async def handler(websocket, path):
                 card_data = json.loads(card_data_message)
 
                 # Autenticar al usuario
-                is_valid, response = await authenticate_user(card_data)
+                is_valid, response = await authenticate_user(card_data, master_key)
                 print(f"\nUser {username} is now logged in")
-
                 # Enviar respuesta al cliente
                 await websocket.send(json.dumps({'type': 'auth_result', 'data': response}))
                 if is_valid:
@@ -261,18 +304,23 @@ async def handler(websocket, path):
 
 
 if __name__ == "__main__":
+    # Leer y descifrar la clave maestra
+    global master_key
+    master_key = read_master_key()
+    print("\n** SERVER STARTED **")
+
     loop = asyncio.get_event_loop()
     # Registrar el manejador de señales para SIGINT (Control+C)
     loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(shutdown(signal.SIGINT, loop)))
 
-    # Iniciar el servidor WebSocket con ping/pong y timeout
+    # Iniciar el servidor WebSocket
     start_server = websockets.serve(
         handler,
         '0.0.0.0',
         8001,
         ssl=context,
-        ping_interval=290,  
-        ping_timeout=10    
+        ping_interval=290,
+        ping_timeout=10
     )
     loop.run_until_complete(start_server)
 
