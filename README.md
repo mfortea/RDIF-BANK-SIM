@@ -25,6 +25,18 @@ python3 client.py
 ```
 This initiates the client-side application, allowing users to log in using RFID cards and interact with the server to administer prices.
 
+
+## 🌏 For the web client, run:
+For install the requires JS modules
+```
+npm i
+```
+For run the app
+```
+node app.js
+```
+This initiates the web client, that show the actual price of the "gas station simulator"
+
 ## 🔒 SECURITY
 - AES encryption for sensitive data.
 - SSL/TLS for secure client-server communication.
@@ -32,19 +44,34 @@ This initiates the client-side application, allowing users to log in using RFID 
 - Real-time price administration with secure database transactions.
 - Nonce usage for preventing replay attacks.
 
-## 📄 Enviroment file format
+## 📄 Enviroment files format
+
+For server.py & card_creator.py
 ```
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_HOST=host_address
-DB_NAME=database_name
-SIMULATION=True_or_False
-SERVER_IP=websocket_server_ip
-SERVER_PORT=websocket_server_port
-CERT_PATH=path_to_cert.pem
-KEY_PATH=path_to_key.pem
+DB_USER=
+DB_PASSWORD=
+DB_HOST=
+DB_NAME=
+SIMULATION=
 ```
 
+
+For client.py
+```
+SERVER_IP=
+SERVER_PORT=
+SIMULATION=
+```
+
+
+For the web client
+```
+DB_HOST=
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
+SERVER_PORT=
+```
 
 
 
