@@ -9,8 +9,11 @@ Project utilizing RFID cards for secure authentication, with real-time price adm
 - Cryptography Library (for AES and Fernet encryption)
 
 ## 📚 Libraries Installation
+
 ```bash
 pip3 install asyncio websocket-client os dotenv cryptography mariadb getpass
+```
+
 
 ## 🚀 For run the server:
 ```
