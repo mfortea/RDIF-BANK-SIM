@@ -3,15 +3,14 @@ Project utilizing RFID cards for secure authentication, with real-time price adm
 
 ## Requirements
 - Python 3.6 or later
-- Libraries: Asyncio, Websockets, JSON, Dotenv
+- Libraries: Asyncio, Websockets, JSON, Dotenv, Cryptography, MariaDB, getpass
 - MFRC 522 Drivers/Library (for RFID functionality)
 - MariaDB (for database operations)
-- Cryptography Library (for AES encryption)
+- Cryptography Library (for AES and Fernet encryption)
 
 ## 📚 Libraries Installation
 ```bash
-pip3 install asyncio websocket-client os dotenv cryptography mariadb
-```
+pip3 install asyncio websocket-client os dotenv cryptography mariadb getpass
 
 ## 🚀 For run the server:
 ```
@@ -38,11 +37,12 @@ node app.js
 This initiates the web client, that show the actual price of the "gas station simulator"
 
 ## 🔒 SECURITY
-- AES encryption for sensitive data.
-- SSL/TLS for secure client-server communication.
-- Secure handling of user passwords and RFID card data.
-- Real-time price administration with secure database transactions.
-- Nonce usage for preventing replay attacks.
+- AES-256 encryption for sensitive data protection.
+- Usage of Fernet for secure key management.
+- SSL/TLS implemented for secure client-server communication.
+- Secure handling and hashing of user passwords and RFID card data.
+-Real-time price administration with secure database transactions.
+Utilization of nonces to prevent replay attacks.
 
 ## 📄 Enviroment files format
 
