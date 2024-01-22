@@ -125,7 +125,7 @@ async def authenticate_user(data, master_key):
 
         # Descomponer los datos recibidos
        
-        aes_key_hex = data.get('aes_key')
+        aes_key_hex = data.get('aes_key') ## IT IS NOT ACTUALLY THE AES_KEY. ITS THE DIVERSIFIED KEY
         card_nonce_hex = data.get('card_nonce')
         card_encrypted_password_hex = data.get('card_encrypted_password_hex')
 

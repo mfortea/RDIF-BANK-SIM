@@ -77,7 +77,7 @@ def send_card_data_to_server(ws, card_data, username):
         # Empaquetar los datos en un objeto JSON y enviarlos al servidor
         message = json.dumps({
         'username': username,
-        'aes_key': card_data[0] + card_data[1],
+        'aes_key': card_data[0] + card_data[1], # IT IS NOT AES_KEY IS THE DIVERSIFIED KEY
         'card_nonce': card_data[2],
         'card_encrypted_password_hex': card_data[3]
         })
